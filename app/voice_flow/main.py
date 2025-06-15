@@ -8,7 +8,7 @@ from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 from .audio_recorder import AudioRecorder
 from .transcriber import Transcriber
 from .clipboard_manager import ClipboardManager
-from .window_manager import WindowManager
+from .dbus_window_manager import DBusWindowManager
 
 
 class RecordingThread(QThread):
@@ -32,11 +32,12 @@ class RecordingThread(QThread):
 
 
 class DictationApp(QWidget):
-    def __init__(self):
+
+    def __init__(self, window_manager: DBusWindowManager):
         super().__init__()
         self.transcriber = Transcriber()
         self.clipboard_manager = ClipboardManager()
-        self.window_manager = None  # Will be set by main()
+        self.window_manager = window_manager
         self.recording_thread = None
         
         self.setup_ui()
@@ -117,32 +118,15 @@ class DictationApp(QWidget):
             QTimer.singleShot(2000, self.close)
     
     def paste_and_close(self, text: str):
-        """Focus previous window, auto-paste text, and close app"""
+        """Call GNOME extension via DBus to focus previous window and paste text, then close."""
         if self.window_manager:
-            # First, try to focus the previous window
-            focus_success = self.window_manager.focus_previous_window()
-            
-            # Wait a moment for focus to settle
-            if focus_success:
-                QTimer.singleShot(300, lambda: self._do_paste_and_close(text))
+            success = self.window_manager.focus_and_paste(text)
+            if success:
+                print("✅ Focused previous window and pasted text via DBus")
             else:
-                # If focusing failed, just try to paste anyway
-                print("Focus failed, trying paste anyway...")
-                self._do_paste_and_close(text)
+                print("❌ DBus FocusAndPaste failed; text remains in clipboard")
         else:
             print(f"📋 Text copied to clipboard: {text[:50]}...")
-            QTimer.singleShot(200, self.close)
-    
-    def _do_paste_and_close(self, text: str):
-        """Actually perform the paste and close"""
-        success = self.window_manager.simulate_paste()
-        
-        if success:
-            print(f"✅ Auto-pasted: {text[:50]}...")
-        else:
-            print(f"❌ Auto-paste failed. Text copied to clipboard: {text[:50]}...")
-        
-        # Close the application
         QTimer.singleShot(200, self.close)
     
     def closeEvent(self, event):
@@ -157,17 +141,15 @@ def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     # Store the currently active window BEFORE creating the Qt app
-    window_manager = WindowManager()
+    window_manager = DBusWindowManager()
     window_manager.store_current_window()
     
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(True)
     
-    window = DictationApp()
-    # Pass the window manager with stored window info to the app
-    window.window_manager = window_manager
+    window = DictationApp(window_manager)
     window.show()
-    
+
     sys.exit(app.exec())
 
 
