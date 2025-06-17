@@ -12,6 +12,7 @@ Requires PyQt6.QtDBus to be available.
 from __future__ import annotations
 
 from typing import Optional
+
 from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 
 _BUS_NAME = "org.gnome.Shell"  # GNOME Shell owns this name
