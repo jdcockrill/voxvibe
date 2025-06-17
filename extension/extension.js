@@ -5,7 +5,6 @@ import GLib from 'gi://GLib';
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
-import Meta from 'gi://Meta';
 
 /**
  * @class DictationWindowExtension

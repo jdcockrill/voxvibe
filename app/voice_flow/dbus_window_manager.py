@@ -12,7 +12,7 @@ Requires PyQt6.QtDBus to be available.
 from __future__ import annotations
 
 from typing import Optional
-from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusReply
+from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 
 _BUS_NAME = "org.gnome.Shell"  # GNOME Shell owns this name
 _OBJECT_PATH = "/org/gnome/Shell/Extensions/Dictation"
@@ -38,9 +38,9 @@ class DBusWindowManager:
     # ---------------------------------------------------------------------
     def store_current_window(self) -> None:
         """Query GNOME Shell for the current focused window and remember its ID."""
-        reply: QDBusReply = self._interface.call("GetFocusedWindow")
-        if reply.type() != QDBusReply.NoError:
-            raise RuntimeError(f"GetFocusedWindow DBus error: {reply.error().message()}")
+        reply = self._interface.call("GetFocusedWindow")
+        if reply.type() == QDBusMessage.MessageType.ErrorMessage:
+            raise RuntimeError(f"GetFocusedWindow DBus error: {reply.errorMessage()}")
 
         window_id = reply.arguments()[0] if reply.arguments() else ""
         if window_id:
@@ -57,9 +57,9 @@ class DBusWindowManager:
             print("[DBusWindowManager] No stored window_id; cannot focus & paste")
             return False
 
-        reply: QDBusReply = self._interface.call("FocusAndPaste", self._stored_window_id, text)
-        if reply.type() != QDBusReply.NoError:
-            print(f"[DBusWindowManager] FocusAndPaste error: {reply.error().message()}")
+        reply = self._interface.call("FocusAndPaste", self._stored_window_id, text)
+        if reply.type() == QDBusMessage.MessageType.ErrorMessage:
+            print(f"[DBusWindowManager] FocusAndPaste error: {reply.errorMessage()}")
             return False
 
         return bool(reply.arguments()[0]) if reply.arguments() else False

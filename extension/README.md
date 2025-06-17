@@ -1,19 +1,24 @@
 # Voice Flow GNOME Extension
 
-This directory contains the GNOME Shell extension for Voice Flow.
-
-## Setup
-
-1. Develop extension JS and metadata here.
-2. For manual install:
-   - Symlink/copy this folder to `~/.local/share/gnome-shell/extensions/voice-flow@yourdomain.com/`
-   - Press Alt+F2, type `r`, and hit Enter to reload GNOME Shell (on X11; on Wayland, log out/in).
-   - Enable the extension via GNOME Extensions app or `gnome-extensions enable voice-flow@yourdomain.com`
+This directory contains the source code for the GNOME Shell extension.
 
 ## Development
-- Exposes a DBus interface for window focus and pasting.
-- See main repo README for build/run coordination.
 
-## TODO
-- Scaffold extension files
-- Implement DBus interface
+The extension is written in JavaScript (`extension.js`) and its metadata is defined in `metadata.json`. The UUID for this extension is `voice-flow@example.com`.
+
+The extension exposes a DBus interface that the main Python application uses for window focus and pasting text.
+
+### Installation for Development
+
+For detailed user installation instructions, please see the main `README.md` in the root of the repository.
+
+The root `Makefile` now provides a convenient `make extension` target to automate installation for development.
+
+Alternatively, to set it up manually with a symlink:
+1. Create a symlink from this directory to the GNOME Shell extensions directory:
+   ```bash
+   # Make sure to use the absolute path to this directory
+   ln -s /path/to/voice-flow/extension ~/.local/share/gnome-shell/extensions/voice-flow@example.com
+   ```
+2. Reload GNOME Shell (log out/in on Wayland, or `Alt+F2` + `r` on X11).
+3. Enable the extension via the Extensions app or `gnome-extensions enable voice-flow@example.com`.

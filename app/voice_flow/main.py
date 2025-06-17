@@ -118,7 +118,7 @@ class DictationApp(QWidget):
             QTimer.singleShot(2000, self.close)
     
     def paste_and_close(self, text: str):
-        """Call GNOME extension via DBus to focus previous window and paste text, then close."""
+        """Call GNOME extension via DBus to focus previous window and paste text, then close and quit app."""
         if self.window_manager:
             success = self.window_manager.focus_and_paste(text)
             if success:
@@ -127,7 +127,12 @@ class DictationApp(QWidget):
                 print("❌ DBus FocusAndPaste failed; text remains in clipboard")
         else:
             print(f"📋 Text copied to clipboard: {text[:50]}...")
-        QTimer.singleShot(200, self.close)
+        QTimer.singleShot(200, self._close_and_quit)
+
+    def _close_and_quit(self):
+        self.close()
+        from PyQt6.QtWidgets import QApplication
+        QApplication.quit()
     
     def closeEvent(self, event):
         if self.recording_thread and self.recording_thread.isRunning():
