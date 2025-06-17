@@ -24,7 +24,7 @@ export default class DictationWindowExtension extends Extension {
         this._connectSignals();
 
         // Add panel indicator with microphone icon (native, no tooltip)
-        this._trayButton = new PanelMenu.Button(0.0, 'Voice-Flow Indicator', false);
+        this._trayButton = new PanelMenu.Button(0.0, 'VoxVibe Indicator', false);
         const icon = new St.Icon({
             icon_name: 'audio-input-microphone-symbolic',
             style_class: 'system-status-icon',

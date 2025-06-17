@@ -189,7 +189,7 @@ class WindowManager:
                             print(f"❌ Could not find window with ID: {window_id}")
                         
             # If we can't parse window data or find the specific window,
-            # try to focus the most recent non-voice-flow window
+            # try to focus the most recent non-voxvibe window
             js_code = """
                 let windows = global.get_window_actors();
                 for (let i = 0; i < windows.length; i++) {
@@ -210,7 +210,7 @@ class WindowManager:
             if reply.type() == QDBusReply.NoError:
                 result = reply.value()
                 if result and len(result) >= 2 and result[0]:
-                    print("✅ Focused most recent non-voice-flow window")
+                    print("✅ Focused most recent non-voxvibe window")
                     return True
                 
         except Exception as e:

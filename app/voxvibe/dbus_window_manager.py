@@ -1,5 +1,5 @@
 """GNOME Shell DBus client used to store the currently focused window and
-focus & paste text via the Voice-Flow GNOME extension.
+focus & paste text via the VoxVibe GNOME extension.
 
 Exposes a small API used by the Qt application:
 
@@ -29,7 +29,7 @@ class DBusWindowManager:
 
         self._interface = QDBusInterface(_BUS_NAME, _OBJECT_PATH, _INTERFACE, self._bus)
         if not self._interface.isValid():
-            raise RuntimeError("Voice-Flow GNOME extension DBus interface not available. Is the extension enabled?")
+            raise RuntimeError("VoxVibe GNOME extension DBus interface not available. Is the extension enabled?")
 
         self._stored_window_id: Optional[str] = None
 
