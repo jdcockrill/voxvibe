@@ -5,6 +5,9 @@ import GLib from 'gi://GLib';
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 /**
  * @class DictationWindowExtension
@@ -19,6 +22,19 @@ export default class DictationWindowExtension extends Extension {
         this._dbusImpl = null;
         this._setupDBusService();
         this._connectSignals();
+
+        // Add panel indicator with microphone icon (native, no tooltip)
+        this._trayButton = new PanelMenu.Button(0.0, 'Voice-Flow Indicator', false);
+        const icon = new St.Icon({
+            icon_name: 'audio-input-microphone-symbolic',
+            style_class: 'system-status-icon',
+        });
+        this._trayButton.add_child(icon);
+        // Add menu item showing app name and version (non-interactive)
+        const appInfoItem = new PopupMenu.PopupMenuItem('Voice Flow v1');
+        appInfoItem.setSensitive(false);
+        this._trayButton.menu.addMenuItem(appInfoItem);
+        Main.panel.addToStatusArea('voice-flow-indicator', this._trayButton);
     }
 
     disable() {
@@ -28,6 +44,11 @@ export default class DictationWindowExtension extends Extension {
         }
         if (this._focusSignal) {
             global.display.disconnect(this._focusSignal);
+        }
+        // Remove panel indicator
+        if (this._trayButton) {
+            this._trayButton.destroy();
+            this._trayButton = null;
         }
     }
 
