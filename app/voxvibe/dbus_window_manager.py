@@ -15,8 +15,8 @@ from typing import Optional
 from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 
 _BUS_NAME = "org.gnome.Shell"  # GNOME Shell owns this name
-_OBJECT_PATH = "/org/gnome/Shell/Extensions/Dictation"
-_INTERFACE = "org.gnome.Shell.Extensions.Dictation"
+_OBJECT_PATH = "/org/gnome/Shell/Extensions/VoxVibe"
+_INTERFACE = "org.gnome.Shell.Extensions.VoxVibe"
 
 
 class DBusWindowManager:

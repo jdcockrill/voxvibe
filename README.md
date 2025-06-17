@@ -1,4 +1,4 @@
-# Voice Flow Monorepo
+# VoxVibe Monorepo
 
 This repository contains two components:
 
@@ -9,8 +9,8 @@ This repository contains two components:
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/voice-flow.git # Replace with your repo URL
-    cd voice-flow
+    git clone https://github.com/your-username/voxvibe.git # Replace with your repo URL
+    cd voxvibe
     ```
 2.  **Install Python:** Ensure you have Python 3.11 or newer.
 3.  **Install `uv`:** If you don't have `uv` (a fast Python package installer and resolver), install it by following the official instructions at [https://github.com/astral-sh/uv](https://github.com/astral-sh/uv).
@@ -39,18 +39,18 @@ If you prefer to install the components manually, follow these steps.
 
 #### 1. GNOME Shell Extension Installation
 
-1.  **Identify Extension UUID:** The UUID is `voice-flow@example.com`.
+1.  **Identify Extension UUID:** The UUID is `voxvibe@example.com`.
 2.  **Install Files:**
     ```bash
-    mkdir -p ~/.local/share/gnome-shell/extensions/voice-flow@example.com
-    cp -r extension/* ~/.local/share/gnome-shell/extensions/voice-flow@example.com/
+    mkdir -p ~/.local/share/gnome-shell/extensions/voxvibe@example.com
+    cp -r extension/* ~/.local/share/gnome-shell/extensions/voxvibe@example.com/
     ```
 3.  **Reload & Enable:** Reload GNOME Shell and then enable the extension:
     ```bash
-    gnome-extensions enable voice-flow@example.com
+    gnome-extensions enable voxvibe@example.com
     ```
 
-#### 2. Voice Flow Application Installation
+#### 2. VoxVibe Application Installation
 
 1.  **Build the App:**
     ```bash
@@ -64,16 +64,16 @@ If you prefer to install the components manually, follow these steps.
     cd ..
     ```
 
-### 3. Create Custom Keyboard Shortcut for Voice Flow
+### 3. Create Custom Keyboard Shortcut for VoxVibe
 
-To easily launch Voice Flow:
+To easily launch VoxVibe:
 
 1.  Open **GNOME Settings**.
 2.  Navigate to **Keyboard** -> **View and Customize Shortcuts**.
 3.  Select **Custom Shortcuts** and click **+**.
 4.  In the dialog:
-    *   **Name:** `Toggle Voice Flow`
-    *   **Command:** `voice-flow`
+    *   **Name:** `Toggle VoxVibe`
+    *   **Command:** `voxvibe`
     *   **Shortcut:** Press your desired key combination (e.g., `Ctrl+Alt+V`).
 5.  Click **Add**.
 
@@ -90,7 +90,7 @@ Use these `make` commands from the project root:
 
 ### Directory Structure
 ```
-voice-flow/
+voxvibe/
 ├── app/         # Python transcription app (source, pyproject.toml)
 ├── extension/   # GNOME Shell extension (extension.js, metadata.json)
 ├── README.md    # This file

@@ -1,6 +1,6 @@
 {
-    "uuid": "voice-flow@example.com",
-    "name": "Voice Flow",
+    "uuid": "voxvibe@voxvibe.app",
+    "name": "VoxVibe",
     "description": "Voice dictation application for Linux",
     "shell-version": ["45", "46", "47", "48", "49"],
     "version": 1

@@ -1,5 +1,5 @@
 def main():
-    print("Hello from voice-flow!")
+    print("Hello from voxvibe!")
 
 
 if __name__ == "__main__":

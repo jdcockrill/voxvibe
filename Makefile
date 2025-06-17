@@ -1,9 +1,9 @@
-# Root Makefile for Voice Flow Monorepo
+# Root Makefile for VoxVibe Monorepo
 
 .PHONY: all app install extension lint clean
 
 # Variables
-EXTENSION_UUID := voice-flow@example.com
+EXTENSION_UUID := voxvibe@app
 EXTENSION_INSTALL_PATH := $(HOME)/.local/share/gnome-shell/extensions/$(EXTENSION_UUID)
 PYTHON_APP_DIR := app
 
@@ -27,7 +27,7 @@ extension:
 	@mkdir -p $(EXTENSION_INSTALL_PATH)
 	@cp -r extension/* $(EXTENSION_INSTALL_PATH)/
 	@echo "Extension files copied to $(EXTENSION_INSTALL_PATH)"
-	@gnome-extensions enable $(EXTENSION_UUID) || echo "Could not enable extension automatically. Please enable 'Voice Flow' in the GNOME Extensions app."
+	@gnome-extensions enable $(EXTENSION_UUID) || echo "Could not enable extension automatically. Please enable 'VoxVibe' in the GNOME Extensions app."
 	@echo "IMPORTANT: You may need to reload GNOME Shell (Alt+F2, 'r', Enter on X11; or log out/in on Wayland)."
 
 # Target to run linters.

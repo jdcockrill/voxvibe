@@ -2,8 +2,8 @@ from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 import time
 
 BUS_NAME = "org.gnome.Shell"
-OBJECT_PATH = "/org/gnome/Shell/Extensions/Dictation"
-INTERFACE = "org.gnome.Shell.Extensions.Dictation"
+OBJECT_PATH = "/org/gnome/Shell/Extensions/VoxVibe"
+INTERFACE = "org.gnome.Shell.Extensions.VoxVibe"
 
 def main():
     bus = QDBusConnection.sessionBus()

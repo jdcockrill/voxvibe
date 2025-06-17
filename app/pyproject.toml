@@ -1,5 +1,5 @@
 [project]
-name = "voice-flow"
+name = "voxvibe"
 version = "0.1.0"
 description = "A voice dictation application for Linux that captures audio and transcribes it to text using Whisper"
 readme = "README.md"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-voice-flow = "voice_flow.main:main"
+voxvibe = "voxvibe.main:main"
 
 [build-system]
 requires = ["hatchling"]

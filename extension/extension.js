@@ -31,10 +31,10 @@ export default class DictationWindowExtension extends Extension {
         });
         this._trayButton.add_child(icon);
         // Add menu item showing app name and version (non-interactive)
-        const appInfoItem = new PopupMenu.PopupMenuItem('Voice Flow v1');
+        const appInfoItem = new PopupMenu.PopupMenuItem('VoxVibe v1');
         appInfoItem.setSensitive(false);
         this._trayButton.menu.addMenuItem(appInfoItem);
-        Main.panel.addToStatusArea('voice-flow-indicator', this._trayButton);
+        Main.panel.addToStatusArea('voxvibe-indicator', this._trayButton);
     }
 
     disable() {
@@ -53,9 +53,9 @@ export default class DictationWindowExtension extends Extension {
     }
 
     _setupDBusService() {
-        const DictationInterface = `
+        const VoxVibeInterface = `
         <node>
-            <interface name="org.gnome.Shell.Extensions.Dictation">
+            <interface name="org.gnome.Shell.Extensions.VoxVibe">
                 <method name="GetFocusedWindow">
                     <arg type="s" direction="out" name="windowId"/>
                 </method>
@@ -70,8 +70,8 @@ export default class DictationWindowExtension extends Extension {
             </interface>
         </node>`;
 
-        this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(DictationInterface, this);
-        this._dbusImpl.export(Gio.DBus.session, '/org/gnome/Shell/Extensions/Dictation');
+        this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(VoxVibeInterface, this);
+        this._dbusImpl.export(Gio.DBus.session, '/org/gnome/Shell/Extensions/VoxVibe');
     }
 
     _connectSignals() {
@@ -88,7 +88,7 @@ export default class DictationWindowExtension extends Extension {
     }
 
     _getWindowId(window) {
-        globalThis.log?.(`[VoiceFlow] Window ID: ${window.get_pid()}-${window.get_id()}`);
+        globalThis.log?.(`[VoxVibe] Window ID: ${window.get_pid()}-${window.get_id()}`);
         // Create a unique identifier for the window
         return `${window.get_pid()}-${window.get_id()}`;
     }
@@ -99,19 +99,19 @@ export default class DictationWindowExtension extends Extension {
         if (this._lastFocusedWindow && !this._lastFocusedWindow.destroyed) {
             result = this._getWindowId(this._lastFocusedWindow);
         }
-        globalThis.log?.(`[VoiceFlow] GetFocusedWindow called, returning: ${result}`);
+        globalThis.log?.(`[VoxVibe] GetFocusedWindow called, returning: ${result}`);
         return result;
     }
 
     _setClipboardText(text) {
-        globalThis.log?.(`[VoiceFlow] _setClipboardText: Setting clipboard and primary to: ${text.slice(0, 40)}...`);
+        globalThis.log?.(`[VoxVibe] _setClipboardText: Setting clipboard and primary to: ${text.slice(0, 40)}...`);
         const clipboard = St.Clipboard.get_default();
         clipboard.set_text(St.ClipboardType.CLIPBOARD, text);
         clipboard.set_text(St.ClipboardType.PRIMARY, text);
     }
 
     _triggerPasteHack() {
-        globalThis.log?.(`[VoiceFlow] _triggerPasteHack: Will simulate Ctrl+V after delay`);
+        globalThis.log?.(`[VoxVibe] _triggerPasteHack: Will simulate Ctrl+V after delay`);
         // Use a 100ms delay to ensure clipboard is set
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
             try {
@@ -125,9 +125,9 @@ export default class DictationWindowExtension extends Extension {
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_v, Clutter.KeyState.RELEASED);
                 // Release Ctrl
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
-                globalThis.log?.(`[VoiceFlow] _triggerPasteHack: Ctrl+V simulated successfully`);
+                globalThis.log?.(`[VoxVibe] _triggerPasteHack: Ctrl+V simulated successfully`);
             } catch (pasteErr) {
-                globalThis.log?.(`[VoiceFlow] ERROR during _triggerPasteHack: ${pasteErr}`);
+                globalThis.log?.(`[VoxVibe] ERROR during _triggerPasteHack: ${pasteErr}`);
             }
             // Return false to remove the timeout (run only once)
             return false;
@@ -135,23 +135,23 @@ export default class DictationWindowExtension extends Extension {
     }
 
     FocusAndPaste(windowId, text) {
-        globalThis.log?.(`[VoiceFlow] FocusAndPaste called with windowId: ${windowId}, text: ${text.slice(0, 40)}...`);
+        globalThis.log?.(`[VoxVibe] FocusAndPaste called with windowId: ${windowId}, text: ${text.slice(0, 40)}...`);
         try {
             // 1. Find and focus the window
-            globalThis.log?.(`[VoiceFlow] Step 1: Searching for window with ID ${windowId}`);
+            globalThis.log?.(`[VoxVibe] Step 1: Searching for window with ID ${windowId}`);
             const windows = global.get_window_actors();
             let found = false;
             for (let windowActor of windows) {
                 const window = windowActor.get_meta_window();
                 if (this._getWindowId(window) === windowId) {
-                    globalThis.log?.(`[VoiceFlow] Step 1: Focusing window ${windowId}`);
+                    globalThis.log?.(`[VoxVibe] Step 1: Focusing window ${windowId}`);
                     window.activate(global.get_current_time());
                     found = true;
                     break;
                 }
             }
             if (!found) {
-                globalThis.log?.(`[VoiceFlow] FocusAndPaste: window not found for ID ${windowId}`);
+                globalThis.log?.(`[VoxVibe] FocusAndPaste: window not found for ID ${windowId}`);
                 return false;
             }
             // 2. Set clipboard content (both CLIPBOARD and PRIMARY)
@@ -160,7 +160,7 @@ export default class DictationWindowExtension extends Extension {
             this._triggerPasteHack();
             return true;
         } catch (e) {
-            globalThis.log?.(`[VoiceFlow] Error in FocusAndPaste: ${e}`);
+            globalThis.log?.(`[VoxVibe] Error in FocusAndPaste: ${e}`);
             console.error('Error in FocusAndPaste:', e);
             return false;
         }
