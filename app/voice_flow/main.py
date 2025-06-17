@@ -7,7 +7,7 @@ from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 
 from .audio_recorder import AudioRecorder
 from .transcriber import Transcriber
-from .clipboard_manager import ClipboardManager
+
 from .dbus_window_manager import DBusWindowManager
 
 
@@ -36,7 +36,7 @@ class DictationApp(QWidget):
     def __init__(self, window_manager: DBusWindowManager):
         super().__init__()
         self.transcriber = Transcriber()
-        self.clipboard_manager = ClipboardManager()
+
         self.window_manager = window_manager
         self.recording_thread = None
         
@@ -101,8 +101,7 @@ class DictationApp(QWidget):
             text = self.transcriber.transcribe(audio_data)
             
             if text and text.strip():
-                # Copy to clipboard
-                self.clipboard_manager.set_text(text.strip())
+
                 
                 # Hide the window to background it
                 self.hide()
@@ -124,14 +123,13 @@ class DictationApp(QWidget):
             if success:
                 print("✅ Focused previous window and pasted text via DBus")
             else:
-                print("❌ DBus FocusAndPaste failed; text remains in clipboard")
+                print("❌ DBus FocusAndPaste failed; text was not pasted")
         else:
-            print(f"📋 Text copied to clipboard: {text[:50]}...")
+            print(f"Text ready to paste: {text[:50]}...")
         QTimer.singleShot(200, self._close_and_quit)
 
     def _close_and_quit(self):
         self.close()
-        from PyQt6.QtWidgets import QApplication
         QApplication.quit()
     
     def closeEvent(self, event):
