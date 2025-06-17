@@ -18,8 +18,8 @@ app:
 # Target to install the Python application wheel.
 install:
 	@echo "--> Installing Python application..."
-	@cd $(PYTHON_APP_DIR) && uv pip install --force-reinstall target/wheels/*.whl
-	@echo "Python application installed. The 'voice-flow' command should now be available."
+	@cd $(PYTHON_APP_DIR) && uv pip install --force-reinstall dist/*.whl
+	@echo "Python application installed. The 'voxvibe' command should now be available."
 
 # Target to install and enable the GNOME Shell extension.
 extension:
@@ -39,7 +39,7 @@ lint:
 # Target to clean up build artifacts and installations.
 clean:
 	@echo "--> Cleaning up..."
-	@rm -rf $(PYTHON_APP_DIR)/target
+	@rm -rf $(PYTHON_APP_DIR)/dist
 	@rm -rf $(PYTHON_APP_DIR)/.venv
 	@rm -rf $(EXTENSION_INSTALL_PATH)
 	@echo "Cleanup complete."

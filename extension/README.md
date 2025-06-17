@@ -4,7 +4,7 @@ This directory contains the source code for the GNOME Shell extension.
 
 ## Development
 
-The extension is written in JavaScript (`extension.js`) and its metadata is defined in `metadata.json`. The UUID for this extension is `voxvibe@example.com`.
+The extension is written in JavaScript (`extension.js`) and its metadata is defined in `metadata.json`. The UUID for this extension is `voxvibe@voxvibe.app`.
 
 The extension exposes a DBus interface that the main Python application uses for window focus and pasting text.
 

@@ -1,0 +1,5 @@
+__pycache__
+dist/
+build/
+.venv
+.ruff_cache
