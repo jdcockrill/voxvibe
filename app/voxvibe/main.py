@@ -5,6 +5,9 @@ import sys
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
+from qt_material import apply_stylesheet, list_themes
+
+print(list_themes())
 
 from .audio_recorder import AudioRecorder
 from .dbus_window_manager import DBusWindowManager
@@ -149,6 +152,7 @@ def main():
     
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(True)
+    apply_stylesheet(app, theme='dark_teal.xml')
     
     window = DictationApp(window_manager)
     window.show()

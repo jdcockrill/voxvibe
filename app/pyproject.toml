@@ -8,6 +8,7 @@ dependencies = [
     "faster-whisper>=1.1.1",
     "numpy>=2.3.0",
     "pyqt6>=6.9.1",
+    "qt-material>=2.17",
     "sounddevice>=0.5.2",
 ]
 
