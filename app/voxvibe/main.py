@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-import sys
 import signal
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton
-from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
+import sys
+
+from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont, QKeySequence, QShortcut
+from PyQt6.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from .audio_recorder import AudioRecorder
-from .transcriber import Transcriber
-
 from .dbus_window_manager import DBusWindowManager
+from .transcriber import Transcriber
 
 
 class RecordingThread(QThread):

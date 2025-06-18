@@ -1,8 +1,9 @@
-import sounddevice as sd
-import numpy as np
-import threading
 import queue
+import threading
 from typing import Optional
+
+import numpy as np
+import sounddevice as sd
 
 
 class AudioRecorder:

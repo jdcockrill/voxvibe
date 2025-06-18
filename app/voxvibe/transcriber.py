@@ -1,7 +1,8 @@
+import os
+from typing import Optional
+
 import numpy as np
 from faster_whisper import WhisperModel
-from typing import Optional
-import os
 
 
 class Transcriber:

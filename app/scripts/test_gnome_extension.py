@@ -1,5 +1,6 @@
-from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 import time
+
+from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 
 BUS_NAME = "org.gnome.Shell"
 OBJECT_PATH = "/org/gnome/Shell/Extensions/VoxVibe"
