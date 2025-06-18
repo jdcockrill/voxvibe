@@ -1,8 +1,19 @@
 #!/bin/bash
 set -e
 echo "Installing VoxVibe {{VERSION}}..."
-pip install app/*.whl
+pipx install --force app/*.whl
+
+# If the extension already exists, disable it, remove the directory and then install
+
+if [ -d "$HOME/.local/share/gnome-shell/extensions/{{EXTENSION_UUID}}" ]; then
+    echo "Disabling and removing existing extension..."
+    gnome-extensions disable {{EXTENSION_UUID}}
+    rm -rf "$HOME/.local/share/gnome-shell/extensions/{{EXTENSION_UUID}}"
+fi
+
+echo "Installing extension..."
 mkdir -p "$HOME/.local/share/gnome-shell/extensions/{{EXTENSION_UUID}}"
 cp -r extension/* "$HOME/.local/share/gnome-shell/extensions/{{EXTENSION_UUID}}/"
 gnome-extensions enable {{EXTENSION_UUID}} || echo "Please enable VoxVibe extension manually"
+
 echo "Installation complete. Please reload GNOME Shell or log out/in."
