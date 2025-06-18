@@ -9,6 +9,8 @@ PYTHON_APP_DIR := app
 DIST_DIR := dist
 BUILD_DIR := build
 
+
+
 # Extract version from pyproject.toml
 VERSION := $(shell cd $(PYTHON_APP_DIR) && python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
 
@@ -47,6 +49,7 @@ help:
 check-tools:
 	@echo "--> Checking required tools..."
 	@command -v uv >/dev/null 2>&1 || { echo "ERROR: uv is not installed"; exit 1; }
+	@command -v pipx >/dev/null 2>&1 || { echo "ERROR: pipx is not installed"; exit 1; }
 	@command -v python >/dev/null 2>&1 || { echo "ERROR: python is not installed"; exit 1; }
 	@command -v git >/dev/null 2>&1 || { echo "ERROR: git is not installed"; exit 1; }
 	@command -v gnome-extensions >/dev/null 2>&1 || { echo "WARNING: gnome-extensions not found (extension installation may fail)"; }
@@ -68,7 +71,7 @@ app: check-tools
 # Target to install the Python application wheel.
 install:
 	@echo "--> Installing Python application..."
-	@cd $(PYTHON_APP_DIR) && uv pip install --force-reinstall dist/*.whl
+	@pipx install --force app/dist/*.whl
 	@echo "Python application installed. The 'voxvibe' command should now be available."
 
 # Target to install and enable the GNOME Shell extension.
@@ -118,14 +121,7 @@ package: dist
 	@echo "Build Date: $(shell date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $(BUILD_DIR)/voxvibe-$(VERSION)/VERSION
 	
 	# Create installation script
-	@echo '#!/bin/bash' > $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
-	@echo 'set -e' >> $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
-	@echo 'echo "Installing VoxVibe $(VERSION)..."' >> $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
-	@echo 'pip install app/*.whl' >> $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
-	@echo 'mkdir -p "$$HOME/.local/share/gnome-shell/extensions/$(EXTENSION_UUID)"' >> $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
-	@echo 'cp -r extension/* "$$HOME/.local/share/gnome-shell/extensions/$(EXTENSION_UUID)/"' >> $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
-	@echo 'gnome-extensions enable $(EXTENSION_UUID) || echo "Please enable VoxVibe extension manually"' >> $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
-	@echo 'echo "Installation complete. Please reload GNOME Shell or log out/in."' >> $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
+	@sed -e 's/{{VERSION}}/$(VERSION)/g' -e 's/{{EXTENSION_UUID}}/$(EXTENSION_UUID)/g' install.sh.template > $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
 	@chmod +x $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
 	
 	# Create tarball
