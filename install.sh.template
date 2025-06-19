@@ -1,25 +1,6 @@
 #!/bin/bash
 set -e
 echo "Installing VoxVibe {{VERSION}}..."
-
-# Check for PortAudio dependency
-echo "Checking for PortAudio dependency..."
-if ! pkg-config --exists portaudio-2.0 2>/dev/null; then
-    echo "WARNING: PortAudio not found. VoxVibe requires PortAudio for audio recording."
-    echo "Please install PortAudio using your system's package manager:"
-    echo "  Ubuntu/Debian: sudo apt install -y portaudio19-dev"
-    echo "  Fedora:        sudo dnf install portaudio portaudio-devel"
-    echo "  Arch Linux:    sudo pacman -S portaudio"
-    echo ""
-    read -p "Continue installation anyway? (y/N): " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Installation cancelled. Please install PortAudio and try again."
-        exit 1
-    fi
-else
-    echo "PortAudio found."
-fi
 pipx install --force app/*.whl
 
 # If the extension already exists, disable it, remove the directory and then install
