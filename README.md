@@ -5,7 +5,7 @@ This repository contains two components:
 - `app/` — Python + Qt6 transcription application
 - `extension/` — GNOME Shell extension for window focus and pasting
 
-
+Built with [Claude Code](https://www.anthropic.com/claude-code) and [Windsurf](https://windsurf.com/).
 
 ## Prerequisites
 
@@ -14,9 +14,34 @@ This repository contains two components:
 3.  **Install `uv`:** If you don't have `uv` (a fast Python package installer and resolver), install it by following the official instructions at [https://github.com/astral-sh/uv](https://github.com/astral-sh/uv).
 4.  **Install `pipx`:** If you don't have `pipx` (a tool for installing and managing Python packages), install it by following the official instructions at [https://pipx.readthedocs.io/en/stable/](https://pipx.readthedocs.io/en/stable/).
 
+Note: `pipx` isn't _strictly_ required. It just makes the creation of the Custom Keyboard Shortcut much simpler.
+
 ## Installation and Setup
 
 This project consists of a GNOME Shell Extension and a Python application. Both need to be set up.
+
+### Installation via the Makefile
+
+To install both the Python application and the GNOME Shell extension using the Makefile, follow these steps:
+
+1. **Check prerequisites** (see above): Ensure you have Python 3.11+, `uv` and `pipx` installed.
+
+2. **Run the main setup command:**
+    ```bash
+    make all
+    ```
+    This will:
+    - Set up the Python application environment and build it (`make app`)
+    - Install the Python application locally via `pipx` (`make install`)
+    - Install and enable the GNOME Shell extension (`make extension`)
+
+    After completion, you should see a message indicating setup is complete.
+
+3. **Reload GNOME Shell:**
+    - On X11: Press <kbd>Alt</kbd> + <kbd>F2</kbd>, type `r`, and press <kbd>Enter</kbd>
+    - On Wayland: Log out and log back in
+
+After installation, follow the instructions in the [Create Custom Keyboard Shortcut for VoxVibe](#create-custom-keyboard-shortcut-for-voxvibe) section to set up a convenient way to launch the Python app. You should also see the extension active in GNOME Shell.
 
 ### Manual Installation
 
@@ -56,7 +81,7 @@ If you make changes to the application yourself and want to reinstall it, you ca
 pipx install --force app/dist/voxvibe-*.whl
 ```
 
-### 3. Create Custom Keyboard Shortcut for VoxVibe
+### Create Custom Keyboard Shortcut for VoxVibe
 
 To easily launch VoxVibe:
 
@@ -64,12 +89,18 @@ To easily launch VoxVibe:
 2.  Navigate to **Keyboard** -> **View and Customize Shortcuts**.
 3.  Select **Custom Shortcuts** and click **+**.
 4.  In the dialog:
-    *   **Name:** `Toggle VoxVibe`
+    *   **Name:** `VoxVibe`
     *   **Command:** `voxvibe`
-    *   **Shortcut:** Press your desired key combination (e.g., `Ctrl+Alt+V`).
+    *   **Shortcut:** Press your desired key combination (e.g., `Super+F2`).
 5.  Click **Add**.
 
 Now, your keyboard shortcut is ready to use.
+
+Note: if you don't have `pipx` installed, your command will need to be something much longer, such as:
+
+```bash
+/path/to/project/app/.venv/bin/voxvibe
+```
 
 ## Development
 
