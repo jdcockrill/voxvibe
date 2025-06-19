@@ -49,7 +49,7 @@ help:
 check-tools:
 	@echo "--> Checking required tools..."
 	@command -v uv >/dev/null 2>&1 || { echo "ERROR: uv is not installed"; exit 1; }
-	@command -v pipx >/dev/null 2>&1 || { echo "ERROR: pipx is not installed"; exit 1; }
+	@command -v pipx >/dev/null 2>&1 || echo "WARNING: pipx is not installed"
 	@command -v python >/dev/null 2>&1 || { echo "ERROR: python is not installed"; exit 1; }
 	@command -v git >/dev/null 2>&1 || { echo "ERROR: git is not installed"; exit 1; }
 	@command -v gnome-extensions >/dev/null 2>&1 || { echo "WARNING: gnome-extensions not found (extension installation may fail)"; }
@@ -71,8 +71,12 @@ app: check-tools
 # Target to install the Python application wheel.
 install:
 	@echo "--> Installing Python application..."
-	@pipx install --force app/dist/*.whl
-	@echo "Python application installed. The 'voxvibe' command should now be available."
+	@if command -v pipx >/dev/null 2>&1; then \
+		pipx install --force app/dist/*.whl; \
+		echo "Python application installed. The 'voxvibe' command should now be available."; \
+	else \
+		echo "WARNING: pipx is not installed. Please install the wheel manually from app/dist/."; \
+	fi
 
 # Target to install and enable the GNOME Shell extension.
 extension:
