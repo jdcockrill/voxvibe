@@ -13,6 +13,10 @@ Built with [Claude Code](https://www.anthropic.com/claude-code) and [Windsurf](h
 2.  **Install Python:** Ensure you have Python 3.11 or newer.
 3.  **Install `uv`:** If you don't have `uv` (a fast Python package installer and resolver), install it by following the official instructions at [https://github.com/astral-sh/uv](https://github.com/astral-sh/uv).
 4.  **Install `pipx`:** If you don't have `pipx` (a tool for installing and managing Python packages), install it by following the official instructions at [https://pipx.readthedocs.io/en/stable/](https://pipx.readthedocs.io/en/stable/).
+5.  **Install PortAudio system dependency:** VoxVibe uses sounddevice which requires PortAudio. Install it using your system's package manager:
+    - **Ubuntu/Debian:** `sudo apt install -y portaudio19-dev`
+    - **Fedora:** `sudo dnf install portaudio portaudio-devel`
+    - **Arch Linux:** `sudo pacman -S portaudio`
 
 Note: `pipx` isn't _strictly_ required. It just makes the creation of the Custom Keyboard Shortcut much simpler.
 
