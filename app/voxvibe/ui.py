@@ -1,13 +1,15 @@
 import logging
 import sys
+
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont, QKeySequence, QShortcut
-from PyQt6.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from .audio_recorder import AudioRecorder
-from .theme import apply_theme, EXTRA
-from .transcriber import Transcriber
 from .dbus_window_manager import DBusWindowManager
+from .theme import EXTRA, apply_theme
+from .transcriber import Transcriber
+
 
 class RecordingThread(QThread):
     recording_finished = pyqtSignal(object)
