@@ -1,0 +1,56 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Run VoxVibe",
+				"type": "shell",
+				"command": "uv",
+				"args": ["run", "python", "-m", "voxvibe"],
+				"options": {
+					"cwd": "${workspaceFolder}/app"
+				},
+				"group": {
+					"kind": "build",
+					"isDefault": false
+				},
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": true,
+					"panel": "shared",
+					"showReuseMessage": false,
+					"clear": true
+				},
+				"problemMatcher": [],
+				"detail": "Run VoxVibe directly without rebuilding"
+			},
+			{
+				"label": "Upgrade VoxVibe",
+				"type": "shell",
+				"command": "make",
+				"args": ["all"],
+				"group": {
+					"kind": "build",
+					"isDefault": true
+				},
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "shared",
+					"showReuseMessage": true,
+					"clear": false
+				},
+				"problemMatcher": [],
+				"detail": "Rebuild and reinstall VoxVibe app and extension"
+			}
+		]
+	}
+}
