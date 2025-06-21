@@ -6,7 +6,9 @@ from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from .audio_recorder import AudioRecorder
+from .config import get_config
 from .dbus_window_manager import DBusWindowManager
+from .history_storage import HistoryStorage
 from .theme import EXTRA, apply_theme
 from .transcriber import Transcriber
 
@@ -34,6 +36,7 @@ class DictationApp(QWidget):
         super().__init__()
         self.transcriber = Transcriber()
         self.window_manager = window_manager
+        self.history_storage = HistoryStorage()
         self.recording_thread = None
         self.setup_ui()
         self.setup_shortcuts()
@@ -125,6 +128,11 @@ class DictationApp(QWidget):
             QTimer.singleShot(2000, self.close)
 
     def paste_and_close(self, text: str):
+        # Save transcription to history if enabled
+        config = get_config()
+        if config.get_history_enabled():
+            self.history_storage.add_transcription(text)
+        
         if self.window_manager:
             success = self.window_manager.focus_and_paste(text)
             if success:

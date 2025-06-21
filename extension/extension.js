@@ -34,6 +34,15 @@ export default class DictationWindowExtension extends Extension {
         const appInfoItem = new PopupMenu.PopupMenuItem('VoxVibe v1');
         appInfoItem.setSensitive(false);
         this._trayButton.menu.addMenuItem(appInfoItem);
+        
+        // Add separator
+        this._trayButton.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        
+        // Add history menu item
+        const historyItem = new PopupMenu.PopupMenuItem('View history');
+        historyItem.connect('activate', () => this._showHistoryPopover());
+        this._trayButton.menu.addMenuItem(historyItem);
+        
         Main.panel.addToStatusArea('voxvibe-indicator', this._trayButton);
     }
 
@@ -62,6 +71,13 @@ export default class DictationWindowExtension extends Extension {
                 <method name="FocusAndPaste">
                     <arg type="s" direction="in" name="windowId"/>
                     <arg type="s" direction="in" name="text"/>
+                    <arg type="b" direction="out" name="success"/>
+                </method>
+                <method name="GetHistory">
+                    <arg type="i" direction="in" name="limit"/>
+                    <arg type="s" direction="out" name="historyJson"/>
+                </method>
+                <method name="ClearHistory">
                     <arg type="b" direction="out" name="success"/>
                 </method>
                 <signal name="WindowFocused">
@@ -163,6 +179,201 @@ export default class DictationWindowExtension extends Extension {
             globalThis.log?.(`[VoxVibe] Error in FocusAndPaste: ${e}`);
             console.error('Error in FocusAndPaste:', e);
             return false;
+        }
+    }
+
+    GetHistory(limit) {
+        globalThis.log?.(`[VoxVibe] GetHistory called with limit: ${limit}`);
+        try {
+            // Spawn Python script to read history
+            const python_cmd = ['python3', '-c', `
+import sys
+import os
+import json
+from pathlib import Path
+
+# Try to find the voxvibe package
+possible_paths = [
+    os.path.join(os.path.expanduser('~'), 'code', 'voice-flow', 'app'),
+    os.path.join(os.path.expanduser('~'), 'code', 'voxvibe', 'app'),
+    '/opt/voxvibe/app',
+    os.path.join(os.getcwd(), 'app')
+]
+
+voxvibe_path = None
+for path in possible_paths:
+    if os.path.exists(os.path.join(path, 'voxvibe', 'history_storage.py')):
+        voxvibe_path = path
+        break
+
+if voxvibe_path:
+    sys.path.insert(0, voxvibe_path)
+    from voxvibe.history_storage import HistoryStorage
+    storage = HistoryStorage()
+    history = storage.get_history(${limit} if ${limit} > 0 else None)
+    result = []
+    for entry_id, text, timestamp in history:
+        result.append({'id': entry_id, 'text': text, 'timestamp': timestamp.isoformat()})
+    print(json.dumps(result))
+else:
+    print('[]')
+`];
+            
+            const [success, stdout, stderr] = GLib.spawn_sync(
+                null, python_cmd, null, 
+                GLib.SpawnFlags.SEARCH_PATH, null
+            );
+            
+            if (success && stdout) {
+                const output = new TextDecoder().decode(stdout).trim();
+                globalThis.log?.(`[VoxVibe] GetHistory result: ${output.slice(0, 100)}...`);
+                return output;
+            } else {
+                globalThis.log?.(`[VoxVibe] GetHistory failed: ${stderr ? new TextDecoder().decode(stderr) : 'unknown error'}`);
+                return '[]';
+            }
+        } catch (e) {
+            globalThis.log?.(`[VoxVibe] Error in GetHistory: ${e}`);
+            return '[]';
+        }
+    }
+
+    ClearHistory() {
+        globalThis.log?.(`[VoxVibe] ClearHistory called`);
+        try {
+            // Spawn Python script to clear history
+            const python_cmd = ['python3', '-c', `
+import sys
+import os
+
+# Try to find the voxvibe package
+possible_paths = [
+    os.path.join(os.path.expanduser('~'), 'code', 'voice-flow', 'app'),
+    os.path.join(os.path.expanduser('~'), 'code', 'voxvibe', 'app'),
+    '/opt/voxvibe/app',
+    os.path.join(os.getcwd(), 'app')
+]
+
+voxvibe_path = None
+for path in possible_paths:
+    if os.path.exists(os.path.join(path, 'voxvibe', 'history_storage.py')):
+        voxvibe_path = path
+        break
+
+if voxvibe_path:
+    sys.path.insert(0, voxvibe_path)
+    from voxvibe.history_storage import HistoryStorage
+    storage = HistoryStorage()
+    success = storage.clear_history()
+    print('true' if success else 'false')
+else:
+    print('false')
+`];
+            
+            const [success, stdout, stderr] = GLib.spawn_sync(
+                null, python_cmd, null, 
+                GLib.SpawnFlags.SEARCH_PATH, null
+            );
+            
+            if (success) {
+                const output = new TextDecoder().decode(stdout).trim();
+                const result = output === 'true';
+                globalThis.log?.(`[VoxVibe] ClearHistory result: ${result}`);
+                return result;
+            } else {
+                globalThis.log?.(`[VoxVibe] ClearHistory failed: ${stderr ? new TextDecoder().decode(stderr) : 'unknown error'}`);
+                return false;
+            }
+        } catch (e) {
+            globalThis.log?.(`[VoxVibe] Error in ClearHistory: ${e}`);
+            return false;
+        }
+    }
+
+    _showHistoryPopover() {
+        globalThis.log?.(`[VoxVibe] _showHistoryPopover called`);
+        try {
+            // Get history data
+            const historyJson = this.GetHistory(30);
+            const history = JSON.parse(historyJson);
+            
+            if (history.length === 0) {
+                Main.notify('VoxVibe', 'No transcription history found');
+                return;
+            }
+            
+            // Create a simple dialog to show history
+            const dialog = new St.BoxLayout({
+                vertical: true,
+                style_class: 'modal-dialog',
+                style: 'background-color: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; max-width: 400px;'
+            });
+            
+            // Add title
+            const title = new St.Label({
+                text: 'Transcription History',
+                style: 'font-size: 16px; font-weight: bold; color: white; margin-bottom: 10px;'
+            });
+            dialog.add_child(title);
+            
+            // Add history items (show only first 10)
+            const itemsToShow = history.slice(0, 10);
+            for (let i = 0; i < itemsToShow.length; i++) {
+                const item = itemsToShow[i];
+                const itemText = item.text.length > 50 ? item.text.slice(0, 50) + '...' : item.text;
+                
+                const itemButton = new St.Button({
+                    label: `${i + 1}. ${itemText}`,
+                    style: 'background-color: rgba(255,255,255,0.1); color: white; padding: 8px; margin: 2px; border-radius: 5px; text-align: left;',
+                    x_expand: true
+                });
+                
+                itemButton.connect('clicked', () => {
+                    this._setClipboardText(item.text);
+                    Main.notify('VoxVibe', 'Text copied to clipboard');
+                    Main.layoutManager.removeChrome(modalContainer);
+                });
+                
+                dialog.add_child(itemButton);
+            }
+            
+            // Add close button
+            const closeButton = new St.Button({
+                label: 'Close',
+                style: 'background-color: rgba(255,0,0,0.7); color: white; padding: 8px; margin-top: 10px; border-radius: 5px;'
+            });
+            closeButton.connect('clicked', () => {
+                Main.layoutManager.removeChrome(modalContainer);
+            });
+            dialog.add_child(closeButton);
+            
+            // Create modal container
+            const modalContainer = new St.Widget({
+                layout_manager: new Clutter.BinLayout(),
+                width: global.screen_width,
+                height: global.screen_height,
+                style: 'background-color: rgba(0,0,0,0.5);'
+            });
+            
+            modalContainer.add_child(dialog);
+            dialog.set_position(
+                (global.screen_width - 400) / 2,
+                (global.screen_height - dialog.height) / 2
+            );
+            
+            Main.layoutManager.addChrome(modalContainer);
+            
+            // Close on click outside
+            modalContainer.connect('button-press-event', (actor, event) => {
+                if (event.get_source() === modalContainer) {
+                    Main.layoutManager.removeChrome(modalContainer);
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
+            
+        } catch (e) {
+            globalThis.log?.(`[VoxVibe] Error in _showHistoryPopover: ${e}`);
+            Main.notify('VoxVibe', 'Error showing history');
         }
     }
 }
