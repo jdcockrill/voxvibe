@@ -31,7 +31,7 @@ export default class DictationWindowExtension extends Extension {
         });
         this._trayButton.add_child(icon);
         // Add menu item showing app name and version (non-interactive)
-        const appInfoItem = new PopupMenu.PopupMenuItem('VoxVibe v1');
+        const appInfoItem = new PopupMenu.PopupMenuItem('VoxVibe v0.2.0');
         appInfoItem.setSensitive(false);
         this._trayButton.menu.addMenuItem(appInfoItem);
         Main.panel.addToStatusArea('voxvibe-indicator', this._trayButton);

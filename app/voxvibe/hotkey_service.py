@@ -1,9 +1,7 @@
-"""Enhanced hotkey service for VoxVibe with multiple chord combinations and modes.
+"""Simplified hotkey service for VoxVibe.
 
 Supports:
-- Alt+Space (existing default)
 - Win+Alt (hold-to-talk)
-- Win+Alt+Space (lock/hands-free mode, release with Space)
 """
 import threading
 import time
@@ -31,10 +29,8 @@ class HotkeyService:
         self.on_stop_recording: Optional[Callable] = None
         self.on_mode_change: Optional[Callable[[RecordingMode], None]] = None
         
-        # Key mappings
-        self.alt_space_combo = {keyboard.Key.alt_l, keyboard.Key.space}
+        # Key mappings - simplified to just Win+Alt
         self.win_alt_combo = {keyboard.Key.cmd, keyboard.Key.alt_l}  # Win+Alt
-        self.win_alt_space_combo = {keyboard.Key.cmd, keyboard.Key.alt_l, keyboard.Key.space}
         
         self._recording = False
         self._lock = threading.Lock()
@@ -73,7 +69,7 @@ class HotkeyService:
             normalized_key = self._normalize_key(key)
             if normalized_key:
                 self.pressed_keys.add(normalized_key)
-                print(f"🔑 Key pressed: {key} -> {normalized_key}, all keys: {self.pressed_keys}")
+                # Debug: print(f"🔑 Key pressed: {key} -> {normalized_key}, all keys: {self.pressed_keys}")
             
             # Check for hotkey combinations
             self._check_hotkey_combinations()
@@ -81,8 +77,7 @@ class HotkeyService:
             # Cancel pending stop if combo is restored
             if self._pending_stop_timer and self.mode == RecordingMode.HOLD_TO_TALK:
                 win_alt_restored = self.win_alt_combo.issubset(self.pressed_keys)
-                alt_space_restored = self.alt_space_combo.issubset(self.pressed_keys)
-                if win_alt_restored or alt_space_restored:
+                if win_alt_restored:
                     print(f"🔑 Combo restored, canceling pending stop")
                     self._pending_stop_timer.cancel()
                     self._pending_stop_timer = None
@@ -93,7 +88,7 @@ class HotkeyService:
             normalized_key = self._normalize_key(key)
             if normalized_key:
                 self.pressed_keys.discard(normalized_key)
-                print(f"🔑 Key released: {key} -> {normalized_key}, remaining keys: {self.pressed_keys}")
+                # Debug: print(f"🔑 Key released: {key} -> {normalized_key}, remaining keys: {self.pressed_keys}")
             
             # Handle mode-specific release logic
             self._handle_key_release(normalized_key)
@@ -127,20 +122,8 @@ class HotkeyService:
         """Check if any hotkey combinations are currently pressed"""
         current_keys = self.pressed_keys.copy()
         
-        # Win+Alt+Space (hands-free toggle) - check this first
-        if self.win_alt_space_combo.issubset(current_keys):
-            if self.mode == RecordingMode.IDLE:
-                self._enter_hands_free_mode()
-            elif self.mode == RecordingMode.HANDS_FREE:
-                self._exit_hands_free_mode()
-                
-        # Win+Alt (hold-to-talk) - only if not in hands-free mode
-        elif self.win_alt_combo.issubset(current_keys) and self.mode != RecordingMode.HANDS_FREE:
-            if self.mode == RecordingMode.IDLE:
-                self._start_hold_to_talk()
-                
-        # Alt+Space (existing default)
-        elif self.alt_space_combo.issubset(current_keys) and self.mode != RecordingMode.HANDS_FREE:
+        # Win+Alt (hold-to-talk) - simple and reliable
+        if self.win_alt_combo.issubset(current_keys):
             if self.mode == RecordingMode.IDLE:
                 self._start_hold_to_talk()
     
@@ -149,26 +132,25 @@ class HotkeyService:
         if self.mode == RecordingMode.HOLD_TO_TALK:
             # Debounce key releases to prevent spurious events
             current_time = time.time()
-            print(f"🔑 Processing key release for {key} at {current_time:.3f}")
+            # Debug: print(f"🔑 Processing key release for {key} at {current_time:.3f}")
             
             if key in self._key_release_times:
                 time_since_last_release = current_time - self._key_release_times[key]
-                print(f"🔑 Time since last release of {key}: {time_since_last_release:.3f}s")
+                # Debug: print(f"🔑 Time since last release of {key}: {time_since_last_release:.3f}s")
                 if time_since_last_release < self._debounce_delay:
-                    print(f"🔑 DEBOUNCING key release for {key} (too soon: {time_since_last_release:.3f}s < {self._debounce_delay}s)")
+                    # Debug: print(f"🔑 DEBOUNCING key release for {key} (too soon: {time_since_last_release:.3f}s < {self._debounce_delay}s)")
                     return
-            else:
-                print(f"🔑 First release of {key}")
+            # else:
+                # Debug: print(f"🔑 First release of {key}")
             
             self._key_release_times[key] = current_time
             
-            # Check if the essential keys for hold-to-talk are still pressed
+            # Check if Win+Alt is still pressed
             win_alt_still_pressed = self.win_alt_combo.issubset(self.pressed_keys)
-            alt_space_still_pressed = self.alt_space_combo.issubset(self.pressed_keys)
             
-            # Stop if neither combination is held (with grace period)
-            if not win_alt_still_pressed and not alt_space_still_pressed:
-                print(f"🔑 Key combo broken, starting grace period. Remaining keys: {self.pressed_keys}")
+            # Stop if Win+Alt is no longer held (with grace period)
+            if not win_alt_still_pressed:
+                # Debug: print(f"🔑 Key combo broken, starting grace period. Remaining keys: {self.pressed_keys}")
                 self._schedule_stop_with_grace_period()
                 
         elif self.mode == RecordingMode.HANDS_FREE:
@@ -249,7 +231,7 @@ class HotkeyService:
             self._check_delayed_stop
         )
         self._pending_stop_timer.start()
-        print(f"🔑 Scheduled stop check in {self._combo_grace_period}s (timer: {id(self._pending_stop_timer)})")
+        # Debug: print(f"🔑 Scheduled stop check in {self._combo_grace_period}s (timer: {id(self._pending_stop_timer)})")
     
     def _check_delayed_stop(self):
         """Check if we should still stop after the grace period"""
@@ -257,9 +239,8 @@ class HotkeyService:
         
         # Check if combo is still broken
         win_alt_still_pressed = self.win_alt_combo.issubset(self.pressed_keys)
-        alt_space_still_pressed = self.alt_space_combo.issubset(self.pressed_keys)
         
-        if not win_alt_still_pressed and not alt_space_still_pressed:
+        if not win_alt_still_pressed:
             print(f"🔑 Grace period expired, stopping hold-to-talk. Keys: {self.pressed_keys}")
             self._stop_hold_to_talk()
         else:

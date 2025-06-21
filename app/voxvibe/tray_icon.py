@@ -1,24 +1,24 @@
 """System tray icon for VoxVibe with history access and quick actions."""
 
 import sys
+from datetime import datetime, timezone
 from typing import Optional
+import os
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtGui import QAction, QIcon, QPixmap, QPainter, QColor
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer
+from PyQt6.QtGui import QAction, QIcon, QPixmap, QPainter, QColor, QCursor
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QMessageBox
 
 from .history import TranscriptionHistory, HistoryEntry
-from .dbus_window_manager import DBusWindowManager
+from .window_manager import WindowManager
 
 
 class VoxVibeTrayIcon(QSystemTrayIcon):
     # Signals
-    show_history_requested = pyqtSignal()
     paste_requested = pyqtSignal(str)  # text to paste
-    toggle_visibility_requested = pyqtSignal()
     quit_requested = pyqtSignal()
     
-    def __init__(self, history: TranscriptionHistory, window_manager: Optional[DBusWindowManager] = None):
+    def __init__(self, history: TranscriptionHistory, window_manager: Optional[WindowManager] = None):
         super().__init__()
         
         self.history = history
@@ -68,88 +68,110 @@ class VoxVibeTrayIcon(QSystemTrayIcon):
     
     def setup_menu(self):
         """Setup the context menu"""
-        menu = QMenu()
+        self.menu = QMenu()
         
-        # Quick paste last transcription
-        self.paste_last_action = QAction("📋 Paste Last", self)
-        self.paste_last_action.triggered.connect(self.paste_last_transcription)
-        menu.addAction(self.paste_last_action)
+        # Add label for history section (no separate paste last action)
+        history_label = QAction("📚 Paste from History:", self)
+        history_label.setEnabled(False)
+        self.menu.addAction(history_label)
         
-        menu.addSeparator()
+        # History items will be added here dynamically
+        self.history_actions = []
+        self.next_10_submenu = None
         
-        # History submenu
-        self.history_menu = QMenu("📚 Recent History", menu)
-        menu.addMenu(self.history_menu)
-        
-        # Show full history
-        show_history_action = QAction("📖 Show All History...", self)
-        show_history_action.triggered.connect(self.show_history_requested.emit)
-        menu.addAction(show_history_action)
-        
-        menu.addSeparator()
-        
-        # Toggle mic bar visibility
-        self.toggle_visibility_action = QAction("👁️ Toggle Mic Bar", self)
-        self.toggle_visibility_action.triggered.connect(self.toggle_visibility_requested.emit)
-        menu.addAction(self.toggle_visibility_action)
-        
-        menu.addSeparator()
+        self.menu.addSeparator()
         
         # About
         about_action = QAction("ℹ️ About VoxVibe", self)
         about_action.triggered.connect(self.show_about)
-        menu.addAction(about_action)
+        self.menu.addAction(about_action)
         
         # Quit
         quit_action = QAction("❌ Quit", self)
         quit_action.triggered.connect(self.quit_requested.emit)
-        menu.addAction(quit_action)
+        self.menu.addAction(quit_action)
         
-        self.setContextMenu(menu)
+        self.setContextMenu(self.menu)
         
         # Update history menu initially
         self.update_history_menu()
     
     def update_history_menu(self):
-        """Update the recent history submenu"""
-        self.history_menu.clear()
+        """Update the recent history items in main menu with Next 10 submenu"""
+        # Remove existing history actions
+        for action in self.history_actions:
+            self.menu.removeAction(action)
+        self.history_actions.clear()
         
-        # Get recent entries
-        recent_entries = self.history.get_recent(limit=10)
+        # Remove existing submenu if it exists
+        if self.next_10_submenu:
+            self.menu.removeAction(self.next_10_submenu.menuAction())
+            self.next_10_submenu = None
+        
+        # Get recent entries (get 15 total: 5 in main menu + 10 in submenu)
+        recent_entries = self.history.get_recent(limit=15)
         
         if not recent_entries:
-            no_history_action = QAction("(No recent history)", self)
+            no_history_action = QAction("  (No recent history)", self)
             no_history_action.setEnabled(False)
-            self.history_menu.addAction(no_history_action)
-            
-            # Disable paste last action
-            self.paste_last_action.setEnabled(False)
-            self.paste_last_action.setText("📋 Paste Last (none)")
+            self.menu.insertAction(self.menu.actions()[-2], no_history_action)  # Insert before separator
+            self.history_actions.append(no_history_action)
         else:
-            # Enable paste last action
-            self.paste_last_action.setEnabled(True)
-            last_text = recent_entries[0].text
-            preview = last_text[:30] + "..." if len(last_text) > 30 else last_text
-            self.paste_last_action.setText(f"📋 Paste Last: \"{preview}\"")
-            
-            # Add recent entries to submenu
-            for entry in recent_entries:
+            # Add first 5 entries directly to main menu
+            first_5 = recent_entries[:5]
+            for i, entry in enumerate(first_5):
                 # Create preview text
                 preview = entry.text[:40] + "..." if len(entry.text) > 40 else entry.text
-                timestamp = entry.timestamp.strftime("%H:%M")
+                # Convert UTC timestamp to local time (BST/GMT) for display
+                local_time = self._convert_to_local_time(entry.timestamp)
+                timestamp = local_time.strftime("%H:%M")
                 
-                action_text = f"[{timestamp}] {preview}"
-                action = QAction(action_text, self)
-                action.triggered.connect(lambda checked, text=entry.text: self.paste_text(text))
-                self.history_menu.addAction(action)
-    
-    def paste_last_transcription(self):
-        """Paste the most recent transcription"""
-        last_entry = self.history.get_last_entry()
-        if last_entry:
-            self.paste_text(last_entry.text)
-        else:
-            self.show_message("No History", "No recent transcriptions found.", QMessageBox.Icon.Information)
+                if i == 0:
+                    # First item is marked as "Last" and styled differently
+                    action_text = f"  ★ Last - {timestamp}: {preview}"
+                    action = QAction(action_text, self)
+                    # Make it bold to stand out
+                    font = action.font()
+                    font.setBold(True)
+                    action.setFont(font)
+                else:
+                    # Regular formatting for other items
+                    action_text = f"  [{timestamp}] {preview}"
+                    action = QAction(action_text, self)
+                
+                # Fix the clicking issue by creating a proper slot function
+                def create_paste_slot(text):
+                    return lambda: self.paste_text(text)
+                
+                action.triggered.connect(create_paste_slot(entry.text))
+                self.menu.insertAction(self.menu.actions()[-2], action)  # Insert before separator
+                self.history_actions.append(action)
+            
+            # Add "Next 10" submenu if there are more than 5 items
+            if len(recent_entries) > 5:
+                self.next_10_submenu = QMenu("📂 Next 10", self.menu)
+                
+                # Add entries 6-15 to submenu
+                next_10 = recent_entries[5:]
+                for entry in next_10:
+                    # Create preview text
+                    preview = entry.text[:40] + "..." if len(entry.text) > 40 else entry.text
+                    # Convert UTC timestamp to local time (BST/GMT) for display
+                    local_time = self._convert_to_local_time(entry.timestamp)
+                    timestamp = local_time.strftime("%H:%M")
+                    
+                    action_text = f"[{timestamp}] {preview}"
+                    action = QAction(action_text, self.next_10_submenu)
+                    
+                    # Fix the clicking issue by creating a proper slot function
+                    def create_paste_slot(text):
+                        return lambda: self.paste_text(text)
+                    
+                    action.triggered.connect(create_paste_slot(entry.text))
+                    self.next_10_submenu.addAction(action)
+                
+                # Add submenu to main menu
+                self.menu.insertMenu(self.menu.actions()[-2], self.next_10_submenu)
     
     def paste_text(self, text: str):
         """Paste text using the window manager"""
@@ -157,7 +179,14 @@ class VoxVibeTrayIcon(QSystemTrayIcon):
             try:
                 # Store current window before pasting
                 self.window_manager.store_current_window()
-                success = self.window_manager.focus_and_paste(text)
+                
+                # Set text to clipboard
+                from PyQt6.QtWidgets import QApplication
+                clipboard = QApplication.clipboard()
+                clipboard.setText(text)
+                
+                # Focus previous window and paste
+                success = self.window_manager.paste_to_previous_window()
                 
                 if success:
                     print(f"✅ Pasted from history: {text[:50]}...")
@@ -179,22 +208,49 @@ class VoxVibeTrayIcon(QSystemTrayIcon):
         """Handle tray icon activation"""
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             # Double-click to paste last transcription
-            self.paste_last_transcription()
-        elif reason == QSystemTrayIcon.ActivationReason.MiddleClick:
-            # Middle-click to toggle mic bar visibility
-            self.toggle_visibility_requested.emit()
+            last_entry = self.history.get_last_entry()
+            if last_entry:
+                self.paste_text(last_entry.text)
+            else:
+                self.show_message("No History", "No recent transcriptions found.", QMessageBox.Icon.Information)
     
     def show_about(self):
-        """Show about dialog"""
-        QMessageBox.about(None, "About VoxVibe", 
-                         "VoxVibe v0.2\n\n"
-                         "Voice transcription with global hotkeys\n"
-                         "and persistent floating mic bar.\n\n"
-                         "Hotkeys:\n"
-                         "• Alt+Space: Hold to talk\n"
-                         "• Win+Alt: Hold to talk\n"
-                         "• Win+Alt+Space: Hands-free mode\n"
-                         "• Space: Exit hands-free mode")
+        """Show about dialog centered on screen"""
+        # Create message box
+        msg_box = QMessageBox()
+        msg_box.setWindowTitle("About VoxVibe")
+        msg_box.setText("VoxVibe v0.2.0\n\n"
+                       "Voice transcription with global hotkeys.\n"
+                       "Fast, reliable speech-to-text for Linux.\n\n"
+                       "Hotkeys:\n"
+                       "• Win+Alt: Hold to talk\n\n"
+                       "Features:\n"
+                       "• Ultra-fast pasting (0.25s)\n"
+                       "• History access via tray menu\n"
+                       "• Native Wayland support")
+        msg_box.setIcon(QMessageBox.Icon.Information)
+        
+        # Center the dialog on screen
+        try:
+            screen = QApplication.primaryScreen()
+            if screen:
+                screen_geometry = screen.availableGeometry()
+                screen_center_x = screen_geometry.width() // 2
+                screen_center_y = screen_geometry.height() // 2
+                
+                # Position dialog at screen center (dialog will auto-size, so we just set position)
+                dialog_x = screen_center_x - 200  # Rough estimate for half dialog width
+                dialog_y = screen_center_y - 150  # Rough estimate for half dialog height
+                
+                msg_box.move(dialog_x, dialog_y)
+                print(f"📱 About dialog centered on screen at ({dialog_x}, {dialog_y})")
+            else:
+                print("📱 No screen found, using default dialog position")
+        except Exception as e:
+            print(f"📱 Could not center dialog: {e}")
+            # Will use default positioning as fallback
+        
+        msg_box.exec()
     
     def show_message(self, title: str, message: str, icon=QMessageBox.Icon.Information, timeout: int = 5000):
         """Show a system tray message"""
@@ -222,6 +278,16 @@ class VoxVibeTrayIcon(QSystemTrayIcon):
         if not recording:
             self.update_history_menu()
     
+    def _convert_to_local_time(self, utc_datetime: datetime) -> datetime:
+        """Convert UTC datetime to local system time (handles BST/GMT automatically)"""
+        # If the datetime is naive (no timezone info), assume it's UTC
+        if utc_datetime.tzinfo is None:
+            utc_datetime = utc_datetime.replace(tzinfo=timezone.utc)
+        
+        # Convert to local timezone
+        local_datetime = utc_datetime.astimezone()
+        return local_datetime
+
     def notify_transcription_complete(self, text: str):
         """Notify that a new transcription is complete"""
         preview = text[:50] + "..." if len(text) > 50 else text

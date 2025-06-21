@@ -12,7 +12,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
 from .audio_recorder import AudioRecorder
-from .dbus_window_manager import DBusWindowManager
+from .window_manager import WindowManager
 from .history import TranscriptionHistory
 from .hotkey_service import HotkeyService, RecordingMode
 from .sound_fx import SoundFX
@@ -24,6 +24,7 @@ from .tray_icon import VoxVibeTrayIcon
 class RecordingThread(QThread):
     """Worker thread for audio recording using the improved timeout approach"""
     recording_finished = pyqtSignal(object, float)  # audio_data, start_time
+    transcription_ready = pyqtSignal(str, int)  # text, duration_ms
     
     def __init__(self, transcriber: Transcriber):
         super().__init__()
@@ -96,7 +97,7 @@ class VoxVibeApp:
         
         # Services
         self.hotkey_service: HotkeyService = None
-        self.window_manager: DBusWindowManager = None
+        self.window_manager: WindowManager = None
         
         # State
         self.current_mode = RecordingMode.IDLE
@@ -125,10 +126,15 @@ class VoxVibeApp:
         
         # Initialize window manager
         try:
-            self.window_manager = DBusWindowManager()
-            print("✅ DBus window manager initialized")
+            self.window_manager = WindowManager()
+            print("✅ Native window manager initialized")
+            
+            # Check dependencies
+            deps = self.window_manager.check_dependencies()
+            print(f"📋 Display server: {deps['display_server']}")
+            print(f"📋 Available tools: {deps.get('tools', {})}")
         except Exception as e:
-            print(f"⚠️ DBus window manager failed: {e}")
+            print(f"⚠️ Window manager failed: {e}")
             self.window_manager = None
         
         # Initialize sound effects
@@ -144,6 +150,7 @@ class VoxVibeApp:
         # Initialize recording thread
         self.recording_thread = RecordingThread(self.transcriber)
         self.recording_thread.recording_finished.connect(self.on_recording_finished)
+        self.recording_thread.transcription_ready.connect(self.on_transcription_complete)
         
         # Initialize hotkey service
         self.hotkey_service = HotkeyService()
@@ -161,7 +168,6 @@ class VoxVibeApp:
     def setup_tray_connections(self):
         """Setup tray icon signal connections"""
         if self.tray_icon:
-            self.tray_icon.toggle_visibility_requested.connect(self.toggle_mic_bar_visibility)
             self.tray_icon.quit_requested.connect(self.quit_application)
     
     def start_recording(self):
@@ -222,17 +228,18 @@ class VoxVibeApp:
         # Update UI state
         self.current_mode = RecordingMode.IDLE
         if self.tray_icon:
-            self.tray_icon.update_status("Ready", False)
+            self.tray_icon.update_status(False, "Ready")
     
     def on_recording_finished(self, audio_data, start_time: float):
-        """Handle completed recording"""
+        """Handle completed recording - do transcription in worker thread, emit to main thread"""
         if audio_data is not None and len(audio_data) > 0:
             print("🔄 Processing transcription...")
             duration_ms = int((time.time() - start_time) * 1000)
             text = self.transcriber.transcribe(audio_data)
             
             if text and text.strip():
-                self.on_transcription_complete(text.strip(), duration_ms)
+                # Emit signal to main thread for clipboard/paste operations
+                self.recording_thread.transcription_ready.emit(text.strip(), duration_ms)
             else:
                 print("❌ No speech detected in audio")
         else:
@@ -251,11 +258,41 @@ class VoxVibeApp:
         if self.window_manager:
             try:
                 print("📋 Attempting to paste text...")
-                success = self.window_manager.focus_and_paste(text)
+                # Set text to clipboard for other apps with fallback
+                print(f"📋 Setting clipboard to: '{text[:50]}{'...' if len(text) > 50 else ''}'")
+                
+                # First try Qt clipboard
+                qt_success = False
+                try:
+                    from PyQt6.QtWidgets import QApplication
+                    clipboard = QApplication.clipboard()
+                    clipboard.setText(text)
+                    print("📋 Qt clipboard set")
+                    qt_success = True
+                except Exception as e:
+                    print(f"📋 Qt clipboard failed: {e}")
+                
+                # Use xclip as backup with shorter timeout for reliability
+                if not qt_success:
+                    print("📋 Qt clipboard failed, using xclip fallback...")
+                    self._set_clipboard_with_xclip(text)
+                else:
+                    # Even if Qt worked, try xclip as backup for reliability (with short timeout)
+                    print("📋 Using xclip as backup for reliability...")
+                    self._set_clipboard_with_xclip(text)
+                
+                # Focus previous window and paste
+                success = self.window_manager.paste_to_previous_window()
                 if success:
                     print("✅ Text pasted successfully")
+                    if self.tray_icon:
+                        self.tray_icon.show_message("VoxVibe", "Text pasted successfully!", timeout=2000)
                 else:
-                    print("❌ Failed to paste text - DBus error")
+                    print("❌ Auto-paste failed - please press Ctrl+V")
+                    if self.tray_icon:
+                        self.tray_icon.show_message("VoxVibe - Paste Ready", 
+                                                  "Text copied to clipboard.\nPress Ctrl+V to paste.", 
+                                                  timeout=5000)
             except Exception as e:
                 print(f"❌ Error pasting text: {e}")
         else:
@@ -265,6 +302,26 @@ class VoxVibeApp:
         if self.tray_icon:
             self.tray_icon.notify_transcription_complete(text)
     
+    def _set_clipboard_with_xclip(self, text: str):
+        """Set clipboard using xclip as fallback/backup"""
+        import subprocess
+        
+        try:
+            result = subprocess.run(['xclip', '-selection', 'clipboard'], 
+                                  input=text, text=True, capture_output=True, timeout=0.25)
+            if result.returncode == 0:
+                print("📋 xclip clipboard set successfully")
+            else:
+                print(f"📋 xclip failed with return code: {result.returncode}")
+                if result.stderr:
+                    print(f"📋 xclip stderr: {result.stderr.decode()}")
+        except subprocess.TimeoutExpired:
+            print("📋 xclip timed out after 0.25 seconds")
+        except FileNotFoundError:
+            print("📋 xclip not found, skipping")
+        except Exception as e:
+            print(f"📋 xclip error: {e}")
+    
     def on_mode_change(self, mode: RecordingMode):
         """Handle recording mode change"""
         self.current_mode = mode
@@ -272,9 +329,7 @@ class VoxVibeApp:
         
         # UI updates handled by tray icon
     
-    def toggle_mic_bar_visibility(self):
-        """Legacy method - mic bar removed"""
-        print("👁️ Mic bar feature removed - using tray icon for status")
+
     
     def quit_application(self):
         """Quit the application"""
@@ -288,9 +343,6 @@ class VoxVibeApp:
             self.recording_thread.stop_recording()
         
         # Close UI components
-        if self.mic_bar:
-            self.mic_bar.close()
-        
         if self.tray_icon:
             self.tray_icon.hide()
         
@@ -305,10 +357,7 @@ class VoxVibeApp:
         
         print("🎯 VoxVibe is running...")
         print("Hotkeys:")
-        print("  • Alt+Space: Hold to talk")
-        print("  • Win+Alt: Hold to talk") 
-        print("  • Win+Alt+Space: Hands-free mode")
-        print("  • Space: Exit hands-free mode")
+        print("  • Win+Alt: Hold to talk")
         
         return self.app.exec()
 
@@ -324,8 +373,6 @@ class VoxVibeApp:
             self.recording_thread.wait()  # Ensure thread finishes before cleanup
         
         # Close UI components
-        if self.mic_bar:
-            self.mic_bar.close()
         if self.tray_icon:
             self.tray_icon.hide()
         

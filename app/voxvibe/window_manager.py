@@ -5,7 +5,7 @@ import time
 from typing import Optional
 
 try:
-    from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusReply
+    from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
     QTDBUS_AVAILABLE = True
 except ImportError:
     QTDBUS_AVAILABLE = False
@@ -86,12 +86,12 @@ class WindowManager:
             
             reply = shell.call("Eval", js_code)
             
-            if reply.type() != QDBusReply.NoError:
-                print(f"DBus call failed: {reply.error().message()}")
+            if reply.type() == QDBusMessage.MessageType.ErrorMessage:
+                print(f"DBus call failed: {reply.errorMessage()}")
                 return None
             
             # Parse the reply - GNOME Shell Eval returns [success, result]
-            result = reply.value()
+            result = reply.arguments()
             if result and len(result) >= 2 and result[0] and result[1]:
                 window_data = result[1]
                 print(f"Active window via QtDBus: {window_data}")
@@ -180,8 +180,8 @@ class WindowManager:
                     
                     reply = shell.call("Eval", js_code)
                     
-                    if reply.type() == QDBusReply.NoError:
-                        result = reply.value()
+                    if reply.type() != QDBusMessage.MessageType.ErrorMessage:
+                        result = reply.arguments()
                         if result and len(result) >= 2 and result[0]:
                             print(f"✅ Focused previous window via QtDBus (ID: {window_id})")
                             return True
@@ -207,8 +207,8 @@ class WindowManager:
             
             reply = shell.call("Eval", js_code)
             
-            if reply.type() == QDBusReply.NoError:
-                result = reply.value()
+            if reply.type() != QDBusMessage.MessageType.ErrorMessage:
+                result = reply.arguments()
                 if result and len(result) >= 2 and result[0]:
                     print("✅ Focused most recent non-voxvibe window")
                     return True
@@ -232,7 +232,7 @@ class WindowManager:
                 ['xdotool', 'key', 'alt+Tab'],
                 
                 # Method 3: ydotool if available (works on Wayland)
-                ['ydotool', 'key', 'alt+Tab']
+                ['/usr/local/bin/ydotool-wrapper.sh', 'key', 'alt+Tab']
             ]
             
             for method in methods:
@@ -249,34 +249,85 @@ class WindowManager:
         return False
     
     def simulate_paste(self) -> bool:
-        """Simulate Ctrl+V paste action using ydotool"""
-        try:
-            # Use ydotool for Wayland
-            print("Simulating Ctrl+V with ydotool...")
-            result = subprocess.run(
-                ['ydotool', 'key', 'ctrl+v'],
-                capture_output=True,
-                timeout=3
-            )
-            
-            if result.returncode == 0:
-                print("✅ ydotool paste successful")
-                return True
-            else:
-                print(f"❌ ydotool failed with return code: {result.returncode}")
-                if result.stderr:
-                    print(f"ydotool stderr: {result.stderr.decode()}")
-                return False
+        """Simulate Ctrl+V paste action with multiple fallback methods"""
+        
+        # Method 1: Try ydotool for Wayland (if available and working)
+        if self.display_server == 'wayland':
+            try:
+                print("Simulating Ctrl+V with ydotool...")
+                # Try wrapper script first, then fallback to direct ydotool
+                try:
+                    result = subprocess.run(
+                        ['/usr/local/bin/ydotool-wrapper.sh', 'key', 'ctrl+v'],
+                        capture_output=True,
+                        timeout=3
+                    )
+                except FileNotFoundError:
+                    result = subprocess.run(
+                        ['ydotool', 'key', 'ctrl+v'],
+                        capture_output=True,
+                        timeout=3
+                    )
                 
-        except subprocess.TimeoutExpired:
-            print("❌ ydotool timed out")
-            return False
-        except FileNotFoundError:
-            print("❌ ydotool not found - please install it")
-            return False
+                if result.returncode == 0:
+                    print("✅ ydotool paste successful")
+                    return True
+                else:
+                    print(f"❌ ydotool failed with return code: {result.returncode}")
+                    if result.stderr:
+                        print(f"ydotool stderr: {result.stderr.decode()}")
+                        
+            except subprocess.TimeoutExpired:
+                print("❌ ydotool timed out")
+            except FileNotFoundError:
+                print("❌ ydotool not found")
+            except Exception as e:
+                print(f"❌ ydotool error: {e}")
+        
+        # Method 2: Try xdotool for X11
+        elif self.display_server == 'x11':
+            try:
+                print("Simulating Ctrl+V with xdotool...")
+                result = subprocess.run(
+                    ['xdotool', 'key', 'ctrl+v'],
+                    capture_output=True,
+                    timeout=3
+                )
+                
+                if result.returncode == 0:
+                    print("✅ xdotool paste successful")
+                    return True
+                else:
+                    print(f"❌ xdotool failed with return code: {result.returncode}")
+                        
+            except subprocess.TimeoutExpired:
+                print("❌ xdotool timed out")
+            except FileNotFoundError:
+                print("❌ xdotool not found")
+            except Exception as e:
+                print(f"❌ xdotool error: {e}")
+        
+        # Method 3: Fallback - show notification to paste manually
+        print("⚠️ Automatic paste failed. Text is in clipboard - press Ctrl+V to paste.")
+        self._show_paste_notification()
+        return False  # Return False so the app knows to show notification
+    
+    def _show_paste_notification(self):
+        """Show a notification telling user to paste manually"""
+        try:
+            # Try to show system notification
+            subprocess.run([
+                'notify-send', 
+                'VoxVibe - Paste Ready', 
+                'Text transcribed and copied to clipboard.\nPress Ctrl+V to paste.',
+                '--icon=input-keyboard',
+                '--urgency=normal',
+                '--expire-time=5000'
+            ], capture_output=True, timeout=2)
+            print("📢 Notification sent: Press Ctrl+V to paste")
         except Exception as e:
-            print(f"❌ ydotool error: {e}")
-            return False
+            print(f"📢 Could not send notification: {e}")
+            print("📢 Please press Ctrl+V to paste the transcribed text")
     
     def paste_to_previous_window(self, delay_ms=500) -> bool:
         """

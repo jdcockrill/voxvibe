@@ -213,10 +213,15 @@ class MicBar(QWidget):
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse press for dragging"""
         if event.button() == Qt.MouseButton.LeftButton:
+            print(f"🖱️ Mouse pressed on MicBar at local pos: ({event.position().x():.1f}, {event.position().y():.1f})")
+            print(f"🖱️ Mouse pressed on MicBar at global pos: ({event.globalPosition().x():.1f}, {event.globalPosition().y():.1f})")
+            
             self.dragging = True
             self.drag_start_pos = event.globalPosition().toPoint()
             self.drag_start_window_pos = self.pos()
             self.drag_started.emit()
+            
+            print(f"🖱️ Started dragging MicBar from window pos: ({self.drag_start_window_pos.x()}, {self.drag_start_window_pos.y()})")
             
             # Stop pulsing while dragging
             self.pulse_animation.stop()
@@ -227,11 +232,16 @@ class MicBar(QWidget):
         if self.dragging:
             delta = event.globalPosition().toPoint() - self.drag_start_pos
             new_pos = self.drag_start_window_pos + delta
+            print(f"🖱️ Dragging MicBar to: ({new_pos.x()}, {new_pos.y()}) (delta: {delta.x()}, {delta.y()})")
             self.move(new_pos)
     
     def mouseReleaseEvent(self, event: QMouseEvent):
         """Handle mouse release to end dragging"""
         if event.button() == Qt.MouseButton.LeftButton and self.dragging:
+            final_pos = self.pos()
+            print(f"🖱️ Mouse released on MicBar at global pos: ({event.globalPosition().x():.1f}, {event.globalPosition().y():.1f})")
+            print(f"🖱️ Finished dragging MicBar to final pos: ({final_pos.x()}, {final_pos.y()})")
+            
             self.dragging = False
             self.drag_ended.emit()
             
