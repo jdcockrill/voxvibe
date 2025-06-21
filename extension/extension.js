@@ -306,13 +306,13 @@ else:
             const dialog = new St.BoxLayout({
                 vertical: true,
                 style_class: 'modal-dialog',
-                style: 'background-color: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; max-width: 400px;'
+                style: 'background-color: rgba(27,29,43,0.95); padding: 20px; border-radius: 8px; max-width: 400px;'
             });
             
             // Add title
             const title = new St.Label({
                 text: 'Transcription History',
-                style: 'font-size: 16px; font-weight: bold; color: white; margin-bottom: 10px;'
+                style: 'font-family: \"Fira Code\", monospace; font-size: 16px; font-weight: bold; color: #e6e6e6; margin-bottom: 10px;'
             });
             dialog.add_child(title);
             
@@ -324,7 +324,7 @@ else:
                 
                 const itemButton = new St.Button({
                     label: `${i + 1}. ${itemText}`,
-                    style: 'background-color: rgba(255,255,255,0.1); color: white; padding: 8px; margin: 2px; border-radius: 5px; text-align: left;',
+                    style: 'background-color: rgba(255,83,255,0.15); color: #e6e6e6; padding: 8px; margin: 2px; border-radius: 8px; text-align: left;',
                     x_expand: true
                 });
                 
@@ -340,7 +340,7 @@ else:
             // Add close button
             const closeButton = new St.Button({
                 label: 'Close',
-                style: 'background-color: rgba(255,0,0,0.7); color: white; padding: 8px; margin-top: 10px; border-radius: 5px;'
+                style: 'background-color: #ed1d24; color: #e6e6e6; padding: 8px; margin-top: 10px; border-radius: 8px;'
             });
             closeButton.connect('clicked', () => {
                 Main.layoutManager.removeChrome(modalContainer);

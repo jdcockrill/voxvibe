@@ -58,7 +58,7 @@ class SingleInstance(AbstractContextManager):
         if not self._server.listen(self._key):
             # Attempt to connect. If connection succeeds, another instance is
             # live; otherwise it's likely a stale socket.
-            logger.debug("Listen failed – attempting to connect to determine stale vs running instance")
+            logger.info("Listen failed – attempting to connect to determine stale vs running instance")
             socket = QLocalSocket()
             socket.connectToServer(self._key)
             if socket.waitForConnected(100):  # ms
