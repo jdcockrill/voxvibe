@@ -45,8 +45,6 @@ class DictationApp(QWidget):
         self.setWindowFlags(
             Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool
         )
-        # self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        # self.setStyleSheet("background: transparent;")
         layout = self._create_main_layout()
         self.setLayout(layout)
 
@@ -139,7 +137,11 @@ class DictationApp(QWidget):
 
     def _close_and_quit(self):
         self.close()
-        QApplication.quit()
+        # Ensure the Qt event loop terminates
+        # Bit of a hack, probably down to the Whisper transcription having its own internal threads.
+        app = QApplication.instance()
+        if app is not None:
+            app.quit()
 
     def closeEvent(self, event):
         if self.recording_thread and self.recording_thread.isRunning():

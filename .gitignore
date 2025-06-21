@@ -3,3 +3,4 @@ dist/
 build/
 .venv
 .ruff_cache
+todo.md
