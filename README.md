@@ -1,129 +1,350 @@
-# VoxVibe Monorepo
+# VoxVibe v0.2.0 🎤
 
-This repository contains two components:
+**Fast, reliable voice transcription with global hotkeys for Linux**
 
-- `app/` — Python + Qt6 transcription application
-- `extension/` — GNOME Shell extension for window focus and pasting
+VoxVibe is a unified Python application that provides instant speech-to-text transcription with global hotkeys. Simply hold **Win+Alt** and speak - VoxVibe will transcribe your speech and paste it directly where you need it.
 
-Built with [Claude Code](https://www.anthropic.com/claude-code) and [Windsurf](https://windsurf.com/).
+## ✨ Features
 
-## Prerequisites
+- **🚀 Ultra-fast pasting** (0.25s response time)
+- **🎯 Global hotkeys** - Works anywhere in the system
+- **📚 Transcription history** - Access recent transcriptions via tray menu  
+- **🔄 Auto-startup** - Runs automatically when you log in
+- **🖥️ Native Wayland & X11 support** - Works on any Linux desktop
+- **🎨 Clean system tray integration** - Unobtrusive background operation
 
-1.  **Clone the repository**
-2.  **Install Python:** Ensure you have Python 3.11 or newer.
-3.  **Install `uv`:** If you don't have `uv` (a fast Python package installer and resolver), install it by following the official instructions at [https://github.com/astral-sh/uv](https://github.com/astral-sh/uv).
-4.  **Install `pipx`:** If you don't have `pipx` (a tool for installing and managing Python packages), install it by following the official instructions at [https://pipx.readthedocs.io/en/stable/](https://pipx.readthedocs.io/en/stable/).
-5.  **Install PortAudio system dependency:** VoxVibe uses sounddevice which requires PortAudio. Install it using your system's package manager:
-    - **Ubuntu/Debian:** `sudo apt install -y portaudio19-dev`
-    - **Fedora:** `sudo dnf install portaudio portaudio-devel`
-    - **Arch Linux:** `sudo pacman -S portaudio`
+## 🎯 Quick Start
 
-Note: `pipx` isn't _strictly_ required. It just makes the creation of the Custom Keyboard Shortcut much simpler.
+1. **Clone and install:**
+   ```bash
+   git clone <repository-url>
+   cd voxvibe
+   make all
+   ```
 
-## Installation and Setup
+2. **Start using immediately:**
+   - VoxVibe will auto-start and appear in your system tray
+   - Hold **Win+Alt** and speak to transcribe
+   - Text appears instantly where your cursor is
 
-This project consists of a GNOME Shell Extension and a Python application. Both need to be set up.
+## 📋 Prerequisites
 
-### Installation via the Makefile
+### Required Dependencies
 
-To install both the Python application and the GNOME Shell extension using the Makefile, follow these steps:
+1. **Python 3.11+** - Check with `python3 --version`
+2. **uv** - Fast Python package manager
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+3. **PortAudio** - For audio recording
+   ```bash
+   # Ubuntu/Debian
+   sudo apt install -y portaudio19-dev
+   
+   # Fedora
+   sudo dnf install portaudio portaudio-devel
+   
+   # Arch Linux
+   sudo pacman -S portaudio
+   ```
 
-1. **Check prerequisites** (see above): Ensure you have Python 3.11+, `uv` and `pipx` installed.
+### Wayland Support (Recommended)
 
-2. **Run the main setup command:**
-    ```bash
-    make all
-    ```
-    This will:
-    - Set up the Python application environment and build it (`make app`)
-    - Install the Python application locally via `pipx` (`make install`)
-    - Install and enable the GNOME Shell extension (`make extension`)
+For optimal Wayland compatibility, install **ydotool**:
+```bash
+# Ubuntu/Debian  
+sudo apt install ydotool
 
-    After completion, you should see a message indicating setup is complete.
+# Fedora
+sudo dnf install ydotool
 
-3. **Reload GNOME Shell:**
-    - On X11: Press <kbd>Alt</kbd> + <kbd>F2</kbd>, type `r`, and press <kbd>Enter</kbd>
-    - On Wayland: Log out and log back in
+# Arch Linux
+sudo pacman -S ydotool
+```
 
-After installation, follow the instructions in the [Create Custom Keyboard Shortcut for VoxVibe](#create-custom-keyboard-shortcut-for-voxvibe) section to set up a convenient way to launch the Python app. You should also see the extension active in GNOME Shell.
+**Note:** ydotool requires setup - see [Wayland Setup](#wayland-setup) section below.
+
+## 🔧 Installation
+
+### Automatic Installation (Recommended)
+
+The simplest way to install VoxVibe:
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd voxvibe
+
+# Install everything
+make all
+```
+
+This will:
+- ✅ Set up Python environment with `uv`
+- ✅ Install VoxVibe system-wide
+- ✅ Configure auto-startup 
+- ✅ Set up system tray integration
 
 ### Manual Installation
 
-If you prefer to install the components manually, follow these steps.
-
-#### 1. GNOME Shell Extension Installation
-
-1.  **Install Files:**
-    ```bash
-    mkdir -p ~/.local/share/gnome-shell/extensions/voxvibe@voxvibe.app
-    cp -r extension/* ~/.local/share/gnome-shell/extensions/voxvibe@voxvibe.app/
-    ```
-2.  **Reload & Enable:** Reload GNOME Shell and then enable the extension:
-    ```bash
-    gnome-extensions enable voxvibe@voxvibe.app
-    ```
-    For Wayland, you need to log out and log in again. You should see a microphone icon
-    appear in the system tray.
-
-#### 2. VoxVibe Application Installation
-
-You can install the application using `pipx`.
-
-1.  **Build the App:**
-    ```bash
-    cd app
-    uv sync
-    uv build
-    ```
-2.  **Install the App:**
-    ```bash
-    pipx install app/dist/voxvibe-*.whl
-    ```
-
-If you make changes to the application yourself and want to reinstall it, you can use the `--force` flag:
-```bash
-pipx install --force app/dist/voxvibe-*.whl
-```
-
-### Create Custom Keyboard Shortcut for VoxVibe
-
-To easily launch VoxVibe:
-
-1.  Open **GNOME Settings**.
-2.  Navigate to **Keyboard** -> **View and Customize Shortcuts**.
-3.  Select **Custom Shortcuts** and click **+**.
-4.  In the dialog:
-    *   **Name:** `VoxVibe`
-    *   **Command:** `voxvibe`
-    *   **Shortcut:** Press your desired key combination (e.g., `Super+F2`).
-5.  Click **Add**.
-
-Now, your keyboard shortcut is ready to use.
-
-Note: if you don't have `pipx` installed, your command will need to be something much longer, such as:
+If you prefer manual control:
 
 ```bash
-/path/to/project/app/.venv/bin/voxvibe
+# 1. Setup Python environment
+cd app
+uv sync
+
+# 2. Build the application  
+uv build
+
+# 3. Install globally (choose one option)
+
+# Option A: Using pipx (recommended for system-wide installation)
+pipx install dist/voxvibe-*.whl
+
+# Option B: Development mode (runs from source)
+# No additional installation needed
+
+# 4. Set up autostart
+
+# For pipx installation:
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/voxvibe.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=VoxVibe
+Comment=Voice transcription with global hotkeys
+Exec=voxvibe
+Icon=microphone
+Terminal=false
+Hidden=false
+X-GNOME-Autostart-enabled=true
+StartupNotify=false
+Categories=AudioVideo;Audio;
+EOF
+chmod +x ~/.config/autostart/voxvibe.desktop
+
+# For development mode:
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/voxvibe.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=VoxVibe
+Comment=Voice transcription with global hotkeys
+Exec=bash -c "cd /path/to/your/voxvibe/app && uv run python -m voxvibe"
+Path=/path/to/your/voxvibe/app
+Icon=microphone
+Terminal=false
+Hidden=false
+X-GNOME-Autostart-enabled=true
+StartupNotify=false
+Categories=AudioVideo;Audio;
+EOF
+chmod +x ~/.config/autostart/voxvibe.desktop
 ```
 
-## Development
+**Note:** Replace `/path/to/your/voxvibe/app` with your actual installation path.
 
-### Directory Structure
+## ⚙️ System Setup
+
+### Wayland Setup
+
+For Wayland systems, configure ydotool:
+
+```bash
+# Enable ydotool service
+sudo systemctl enable --now ydotool
+
+# Add yourself to input group (may require logout)
+sudo usermod -a -G input $USER
+
+# Test ydotool works
+ydotool key ctrl+c
+```
+
+### Verify Installation
+
+Check that everything is working:
+
+```bash
+# Check VoxVibe is installed
+voxvibe --version
+
+# Check dependencies
+~/check-voxvibe-conflicts.sh  # (created during installation)
+```
+
+## 🎮 Usage
+
+### Basic Operation
+
+1. **Start VoxVibe** - It starts automatically on login, or run `voxvibe`
+2. **Look for tray icon** - VoxVibe appears in your system tray
+3. **Hold Win+Alt and speak** - Release when done speaking
+4. **Text appears instantly** - Transcribed text is pasted where your cursor is
+
+### Hotkeys
+
+| Hotkey | Action |
+|--------|--------|
+| **Win+Alt** (hold) | Record and transcribe speech |
+| **Alt+Space** (hold) | Alternative recording hotkey |
+| **Win+Alt+Space** | Toggle hands-free mode |
+| **Space** | Exit hands-free mode |
+
+### Tray Menu Features
+
+- **📚 Paste from History** - Access your last 15 transcriptions
+- **⭐ Last Transcription** - Quickly re-paste the most recent text
+- **ℹ️ About** - View version and hotkey information
+- **❌ Quit** - Exit VoxVibe
+
+### History Access
+
+- **Recent transcriptions** appear in the tray menu
+- **Double-click tray icon** to paste the last transcription
+- **Right-click** for full history menu with timestamps
+
+## 🔧 Management
+
+### Start/Stop VoxVibe
+
+```bash
+# Manual start
+voxvibe
+
+# Stop (from tray menu or)
+pkill voxvibe
+
+# Check if running
+ps aux | grep voxvibe
+```
+
+### Disable Auto-start
+
+```bash
+# Disable auto-start
+rm ~/.config/autostart/voxvibe.desktop
+
+# Re-enable auto-start
+make all  # (re-run installation)
+```
+
+### Check for Conflicts
+
+If you experience issues:
+
+```bash
+# Run conflict checker (created during installation)
+~/check-voxvibe-conflicts.sh
+
+# This will show:
+# - Running VoxVibe processes
+# - Old extension conflicts  
+# - Installation status
+```
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+**VoxVibe doesn't start on login:**
+```bash
+# Check autostart file exists
+ls -la ~/.config/autostart/voxvibe.desktop
+
+# Recreate if missing
+make all
+```
+
+**No audio recording:**
+```bash
+# Check PortAudio installation
+python3 -c "import sounddevice; print('PortAudio OK')"
+
+# Install if needed (see Prerequisites)
+```
+
+**Pasting doesn't work on Wayland:**
+```bash
+# Check ydotool is running
+systemctl status ydotool
+
+# Install and configure ydotool (see Wayland Setup)
+```
+
+**Multiple tray icons:**
+```bash
+# Clean up conflicts
+~/check-voxvibe-conflicts.sh
+
+# Kill duplicate processes
+pkill voxvibe
+voxvibe  # Start fresh
+```
+
+### Getting Help
+
+1. **Check the conflict detector:** `~/check-voxvibe-conflicts.sh`
+2. **View logs:** VoxVibe shows detailed logs when run from terminal
+3. **Verify dependencies:** Ensure PortAudio and ydotool are properly installed
+
+## 🏗️ Development
+
+### Project Structure
 ```
 voxvibe/
-├── app/         # Python transcription app (source, pyproject.toml)
-├── extension/   # GNOME Shell extension (extension.js, metadata.json)
-├── README.md    # This file
+├── app/                 # Main Python application
+│   ├── voxvibe/        # Source code
+│   ├── pyproject.toml  # Dependencies and metadata
+│   └── README.md       # Development notes
+├── extension/          # Legacy GNOME extension (deprecated)
+├── Makefile           # Build and installation automation
+└── README.md          # This file
 ```
 
+### Development Setup
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd voxvibe/app
+
+# Setup development environment  
+uv sync
+
+# Run in development mode
+uv run python -m voxvibe
+
+# Install development version
+make all
+```
+
+### Building Releases
+
+```bash
+# Update version in app/pyproject.toml
+# Then build and release
+make release
+```
+
+## 📝 What's New in v0.2.0
+
+### Major Changes
+- **🔄 Unified Architecture** - No more GNOME extension required
+- **⚡ Improved Performance** - Faster startup and transcription
+- **🎯 Enhanced Hotkeys** - More reliable key detection
+- **📱 Better Tray Integration** - Cleaner system tray experience
+- **🔧 Auto-startup** - Automatic system startup configuration
+- **🛠️ Conflict Detection** - Built-in tools to prevent installation issues
+
+### Breaking Changes
+- **Removed GNOME extension dependency** - VoxVibe is now a single Python application
+- **New installation method** - Use `make all` instead of separate component installation
+- **Updated hotkeys** - Simplified to Win+Alt (old shortcuts still work)
+
 ---
-For further development details on specific components, you can explore their respective directories.
-The `app/README.md` can be used for more detailed notes on Python app development, and `extension/README.md` for extension-specific development notes.
 
-### Release
+**Enjoy ultra-fast voice transcription with VoxVibe! 🚀**
 
-To release a new version, follow these steps:
-
-1.  **Update Version:** Update the version in `app/pyproject.toml` and `extension/metadata.json`.
-2.  **Build Release:** Run `make release` to create the release package.
-3.  **Push Release:** Push the release tag to GitHub: `git push origin v$(VERSION)`.
+For issues or feature requests, please visit the project repository.
