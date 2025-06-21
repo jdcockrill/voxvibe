@@ -16,8 +16,8 @@ import logging
 from contextlib import AbstractContextManager
 from typing import Optional
 
-from PyQt6.QtNetwork import QLocalServer, QLocalSocket
 from PyQt6.QtCore import QObject
+from PyQt6.QtNetwork import QLocalServer, QLocalSocket
 
 logger = logging.getLogger(__name__)
 
@@ -70,15 +70,15 @@ class SingleInstance(AbstractContextManager):
                 QLocalServer.removeServer(self._key)
                 if not self._server.listen(self._key):
                     # Give up – cannot obtain lock
-                    raise SingleInstanceError("Could not obtain single-instance lock (socket busy).")
+                    raise SingleInstanceError("Another instance may be starting up. Please try again in a moment.")
 
-        logger.debug("Single-instance lock acquired via QLocalServer")
+        logger.info("Single-instance lock acquired via QLocalServer")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._server and self._server.isListening():
             self._server.close()
             QLocalServer.removeServer(self._key)
-            logger.debug("Single-instance lock released and socket removed")
+            logger.info("Single-instance lock released and socket removed")
         # Propagate exceptions, if any
         return False

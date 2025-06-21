@@ -1,9 +1,12 @@
+import logging
 import queue
 import threading
 from typing import Optional
 
 import numpy as np
 import sounddevice as sd
+
+logger = logging.getLogger(__name__)
 
 
 class AudioRecorder:
@@ -35,7 +38,7 @@ class AudioRecorder:
         """Internal method to record audio continuously"""
         def audio_callback(indata, frames, time, status):
             if status:
-                print(f"Audio callback status: {status}")
+                logger.warning(f"Audio callback status: {status}")
             if self.is_recording:
                 self.audio_queue.put(indata.copy())
         
@@ -49,7 +52,7 @@ class AudioRecorder:
                 while self.is_recording:
                     sd.sleep(100)  # Sleep for 100ms
         except Exception as e:
-            print(f"Recording error: {e}")
+            logger.exception(f"Recording error: {e}")
     
     def stop_recording(self) -> Optional[np.ndarray]:
         """Stop recording and return the recorded audio data"""
@@ -105,5 +108,5 @@ class AudioRecorder:
             sd.default.device[0] = device_id  # Set input device
             return True
         except Exception as e:
-            print(f"Error setting device: {e}")
+            logger.exception(f"Error setting device: {e}")
             return False

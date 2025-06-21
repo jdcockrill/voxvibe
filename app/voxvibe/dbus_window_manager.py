@@ -11,9 +11,12 @@ Requires PyQt6.QtDBus to be available.
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
+
+logger = logging.getLogger(__name__)
 
 _BUS_NAME = "org.gnome.Shell"  # GNOME Shell owns this name
 _OBJECT_PATH = "/org/gnome/Shell/Extensions/VoxVibe"
@@ -55,12 +58,12 @@ class DBusWindowManager:
         Returns True on success, False otherwise.
         """
         if not self._stored_window_id:
-            print("[DBusWindowManager] No stored window_id; cannot focus & paste")
+            logger.warning("[DBusWindowManager] No stored window_id; cannot focus & paste")
             return False
 
         reply = self._interface.call("FocusAndPaste", self._stored_window_id, text)
         if reply.type() == QDBusMessage.MessageType.ErrorMessage:
-            print(f"[DBusWindowManager] FocusAndPaste error: {reply.errorMessage()}")
+            logger.exception(f"[DBusWindowManager] FocusAndPaste error: {reply.errorMessage()}")
             return False
 
         return bool(reply.arguments()[0]) if reply.arguments() else False

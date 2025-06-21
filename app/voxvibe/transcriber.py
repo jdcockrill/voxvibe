@@ -1,8 +1,11 @@
+import logging
 import os
 from typing import Optional
 
 import numpy as np
 from faster_whisper import WhisperModel
+
+logger = logging.getLogger(__name__)
 
 
 class Transcriber:
@@ -26,7 +29,7 @@ class Transcriber:
     def _load_model(self):
         """Load the Whisper model"""
         try:
-            print(f"Loading Whisper model: {self.model_size}")
+            logger.info(f"Loading Whisper model: {self.model_size}")
             
             # Use CPU for better compatibility
             if self.device == "auto":
@@ -45,10 +48,10 @@ class Transcriber:
                 compute_type=compute_type,
                 download_root=os.path.expanduser("~/.cache/whisper")
             )
-            print(f"Model loaded successfully on {device} with {compute_type}")
+            logger.info(f"Model loaded successfully on {device} with {compute_type}")
             
         except Exception as e:
-            print(f"Error loading Whisper model: {e}")
+            logger.exception(f"Error loading Whisper model: {e}")
             raise
     
     def transcribe(self, audio_data: np.ndarray, language="en") -> Optional[str]:
@@ -63,11 +66,11 @@ class Transcriber:
             Transcribed text or None if transcription failed
         """
         if self.model is None:
-            print("Model not loaded")
+            logger.warning("Model not loaded")
             return None
         
         if audio_data is None or len(audio_data) == 0:
-            print("No audio data provided")
+            logger.warning("No audio data provided")
             return None
         
         try:
@@ -82,7 +85,7 @@ class Transcriber:
             # Check minimum length (at least 0.1 seconds)
             min_samples = int(0.1 * 16000)  # 0.1 seconds at 16kHz
             if len(audio_data) < min_samples:
-                print("Audio too short for transcription")
+                logger.warning("Audio too short for transcription")
                 return None
             
             # Transcribe using faster-whisper
@@ -106,20 +109,20 @@ class Transcriber:
                 text_parts.append(segment.text.strip())
             
             if not text_parts:
-                print("No speech detected in audio")
+                logger.warning("No speech detected in audio")
                 return None
             
             full_text = " ".join(text_parts).strip()
             
             if full_text:
-                print(f"Transcribed ({info.language}, {info.language_probability:.2f}): {full_text}")
+                logger.info(f"Transcribed ({info.language}, {info.language_probability:.2f}): {full_text}")
                 return full_text
             else:
-                print("Empty transcription result")
+                logger.warning("Empty transcription result")
                 return None
                 
         except Exception as e:
-            print(f"Transcription error: {e}")
+            logger.exception(f"Transcription error: {e}")
             return None
     
     def get_available_models(self):
