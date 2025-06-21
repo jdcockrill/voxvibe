@@ -175,34 +175,106 @@ class VoxVibeTrayIcon(QSystemTrayIcon):
     
     def paste_text(self, text: str):
         """Paste text using the window manager"""
+        print(f"🖱️ TRAY PASTE DEBUG: Starting paste operation for text: '{text[:30]}...'")
+        
         if self.window_manager:
             try:
+                print("🖱️ TRAY PASTE DEBUG: Window manager available, proceeding...")
+                
                 # Store current window before pasting
+                print("🖱️ TRAY PASTE DEBUG: Storing current window...")
                 self.window_manager.store_current_window()
                 
-                # Set text to clipboard
-                from PyQt6.QtWidgets import QApplication
-                clipboard = QApplication.clipboard()
-                clipboard.setText(text)
+                # Set text to clipboard with multiple fallback methods
+                print("🖱️ TRAY PASTE DEBUG: Setting text to clipboard with fallbacks...")
+                clipboard_success = self._set_clipboard_with_fallbacks(text)
+                
+                if clipboard_success:
+                    print(f"🖱️ TRAY PASTE DEBUG: Clipboard successfully set to: '{text[:30]}...'")
+                else:
+                    print("🖱️ TRAY PASTE DEBUG: ⚠️ Clipboard setting failed!")
                 
                 # Focus previous window and paste
+                print("🖱️ TRAY PASTE DEBUG: Attempting to focus previous window and paste...")
                 success = self.window_manager.paste_to_previous_window()
                 
                 if success:
-                    print(f"✅ Pasted from history: {text[:50]}...")
+                    print(f"✅ TRAY PASTE DEBUG: SUCCESS - Pasted from history: {text[:50]}...")
                     self.show_message("Pasted", f"Text pasted successfully!", 
                                     QMessageBox.Icon.Information, timeout=2000)
                 else:
-                    print(f"❌ Failed to paste from history")
+                    print(f"❌ TRAY PASTE DEBUG: FAILED - Failed to paste from history")
                     self.show_message("Paste Failed", "Could not paste text. Try again.", 
                                     QMessageBox.Icon.Warning)
                     
             except Exception as e:
-                print(f"❌ Error pasting from history: {e}")
+                print(f"❌ TRAY PASTE DEBUG: EXCEPTION - Error pasting from history: {e}")
+                print(f"🖱️ TRAY PASTE DEBUG: Exception type: {type(e).__name__}")
+                import traceback
+                print(f"🖱️ TRAY PASTE DEBUG: Full traceback: {traceback.format_exc()}")
                 self.show_message("Error", f"Paste error: {e}", QMessageBox.Icon.Critical)
         else:
             # Fallback: emit signal for manual handling
+            print("🖱️ TRAY PASTE DEBUG: No window manager available, emitting paste signal")
             self.paste_requested.emit(text)
+    
+    def _set_clipboard_with_fallbacks(self, text: str) -> bool:
+        """Set clipboard using multiple fallback methods like in main app"""
+        success = False
+        
+        # Method 1: Try Qt clipboard
+        try:
+            print("🖱️ CLIPBOARD: Trying Qt clipboard...")
+            from PyQt6.QtWidgets import QApplication
+            clipboard = QApplication.clipboard()
+            clipboard.setText(text)
+            print("🖱️ CLIPBOARD: Qt clipboard set successfully")
+            success = True
+        except Exception as e:
+            print(f"🖱️ CLIPBOARD: Qt clipboard failed: {e}")
+        
+        # Method 2: Try xclip as backup (with short timeout)
+        try:
+            print("🖱️ CLIPBOARD: Trying xclip as backup...")
+            import subprocess
+            result = subprocess.run(['xclip', '-selection', 'clipboard'], 
+                                  input=text, text=True, capture_output=True, timeout=0.5)
+            if result.returncode == 0:
+                print("🖱️ CLIPBOARD: xclip set successfully")
+                success = True
+            else:
+                print(f"🖱️ CLIPBOARD: xclip failed with return code: {result.returncode}")
+        except subprocess.TimeoutExpired:
+            print("🖱️ CLIPBOARD: xclip timed out")
+        except FileNotFoundError:
+            print("🖱️ CLIPBOARD: xclip not found")
+        except Exception as e:
+            print(f"🖱️ CLIPBOARD: xclip error: {e}")
+        
+        # Method 3: Try wl-copy for Wayland
+        try:
+            print("🖱️ CLIPBOARD: Trying wl-copy for Wayland...")
+            import subprocess
+            result = subprocess.run(['wl-copy'], 
+                                  input=text, text=True, capture_output=True, timeout=0.5)
+            if result.returncode == 0:
+                print("🖱️ CLIPBOARD: wl-copy set successfully")
+                success = True
+            else:
+                print(f"🖱️ CLIPBOARD: wl-copy failed with return code: {result.returncode}")
+        except subprocess.TimeoutExpired:
+            print("🖱️ CLIPBOARD: wl-copy timed out")
+        except FileNotFoundError:
+            print("🖱️ CLIPBOARD: wl-copy not found")
+        except Exception as e:
+            print(f"🖱️ CLIPBOARD: wl-copy error: {e}")
+        
+        if success:
+            print(f"🖱️ CLIPBOARD: ✅ Successfully set clipboard to: '{text[:30]}...'")
+        else:
+            print("🖱️ CLIPBOARD: ❌ All clipboard methods failed!")
+        
+        return success
     
     def on_tray_activated(self, reason):
         """Handle tray icon activation"""
