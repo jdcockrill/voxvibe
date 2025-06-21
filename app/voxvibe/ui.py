@@ -82,7 +82,7 @@ class DictationApp(QWidget):
         button = QPushButton("Cancel (Esc)")
         button.setFixedWidth(200)
         button.setStyleSheet(f"background-color: {EXTRA['errorColor']}; color: {EXTRA['textColor']}; border-color: {EXTRA['errorColor']};")
-        button.clicked.connect(self.close)
+        button.clicked.connect(self._close_and_quit)
         return button
 
     def _create_button_layout(self, button):
@@ -96,7 +96,7 @@ class DictationApp(QWidget):
         space_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Space), self)
         space_shortcut.activated.connect(self.stop_recording)
         esc_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
-        esc_shortcut.activated.connect(self.close)
+        esc_shortcut.activated.connect(self._close_and_quit)
 
     def start_recording(self):
         self.recording_thread = RecordingThread()
@@ -119,10 +119,10 @@ class DictationApp(QWidget):
                 QTimer.singleShot(500, lambda: self.paste_and_close(text.strip()))
             else:
                 self.status_label.setText("❌ No speech detected")
-                QTimer.singleShot(2000, self.close)
+                QTimer.singleShot(2000, self._close_and_quit)
         else:
             self.status_label.setText("❌ No audio recorded")
-            QTimer.singleShot(2000, self.close)
+            QTimer.singleShot(2000, self._close_and_quit)
 
     def paste_and_close(self, text: str):
         if self.window_manager:
