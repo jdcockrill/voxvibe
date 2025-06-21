@@ -10,6 +10,7 @@ dependencies = [
     "pyqt6>=6.9.1",
     "qt-material>=2.17",
     "sounddevice>=0.5.2",
+    "whisper-streaming",
 ]
 
 [project.scripts]
