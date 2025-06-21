@@ -1,7 +1,7 @@
 import logging
 import queue
 import threading
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 import sounddevice as sd
@@ -10,25 +10,33 @@ logger = logging.getLogger(__name__)
 
 
 class AudioRecorder:
-    def __init__(self, sample_rate=16000, channels=1):
+    def __init__(self, sample_rate=16000, channels=1, chunk_duration_ms=320):
         self.sample_rate = sample_rate
         self.channels = channels
+        self.chunk_duration_ms = chunk_duration_ms
+        self.chunk_size = int(sample_rate * chunk_duration_ms / 1000)  # samples per chunk
         self.is_recording = False
         self.audio_queue = queue.Queue()
         self.recording_thread = None
+        self.chunk_callback = None  # Callback for streaming chunks
         
         # Set default device to None to use system default
         sd.default.samplerate = sample_rate
         sd.default.channels = channels
         sd.default.dtype = np.float32
         
-    def start_recording(self):
-        """Start recording audio from the default microphone"""
+    def start_recording(self, chunk_callback: Optional[Callable[[np.ndarray], None]] = None):
+        """Start recording audio from the default microphone
+        
+        Args:
+            chunk_callback: Optional callback function that receives audio chunks as they arrive
+        """
         if self.is_recording:
             return
             
         self.is_recording = True
         self.audio_queue = queue.Queue()
+        self.chunk_callback = chunk_callback
         
         # Start recording in a separate thread
         self.recording_thread = threading.Thread(target=self._record)
@@ -36,11 +44,35 @@ class AudioRecorder:
     
     def _record(self):
         """Internal method to record audio continuously"""
+        audio_buffer = np.array([], dtype=np.float32)
+        
         def audio_callback(indata, frames, time, status):
+            nonlocal audio_buffer
             if status:
                 logger.warning(f"Audio callback status: {status}")
             if self.is_recording:
+                # Add to queue for batch processing (backward compatibility)
                 self.audio_queue.put(indata.copy())
+                
+                # Handle streaming chunks
+                if self.chunk_callback:
+                    # Convert to mono if needed and flatten
+                    audio_data = indata.copy()
+                    if audio_data.ndim > 1:
+                        audio_data = np.mean(audio_data, axis=1)
+                    
+                    # Add to buffer
+                    audio_buffer = np.concatenate([audio_buffer, audio_data.flatten()])
+                    
+                    # Emit chunks of the specified size
+                    while len(audio_buffer) >= self.chunk_size:
+                        chunk = audio_buffer[:self.chunk_size]
+                        audio_buffer = audio_buffer[self.chunk_size:]
+                        
+                        try:
+                            self.chunk_callback(chunk)
+                        except Exception as e:
+                            logger.exception(f"Chunk callback error: {e}")
         
         try:
             with sd.InputStream(

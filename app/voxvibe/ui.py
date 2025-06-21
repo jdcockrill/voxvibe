@@ -1,42 +1,27 @@
 import logging
 import sys
 
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from .audio_recorder import AudioRecorder
 from .dbus_window_manager import DBusWindowManager
+from .event_bus import Events, event_bus
+from .streaming_recorder import StreamingRecordingThread
 from .theme import EXTRA, apply_theme
 from .transcriber import Transcriber
 
-
-class RecordingThread(QThread):
-    recording_finished = pyqtSignal(object)
-
-    def __init__(self):
-        super().__init__()
-        self.recorder = AudioRecorder()
-        self.should_stop = False
-
-    def run(self):
-        self.recorder.start_recording()
-        while not self.should_stop:
-            self.msleep(100)
-        audio_data = self.recorder.stop_recording()
-        self.recording_finished.emit(audio_data)
-
-    def stop_recording(self):
-        self.should_stop = True
+# Import the streaming recording thread as RecordingThread for backward compatibility
+RecordingThread = StreamingRecordingThread
 
 class DictationApp(QWidget):
     def __init__(self, window_manager: DBusWindowManager):
         super().__init__()
-        self.transcriber = Transcriber()
         self.window_manager = window_manager
         self.recording_thread = None
         self.setup_ui()
         self.setup_shortcuts()
+        self.setup_event_listeners()
         QTimer.singleShot(500, self.start_recording)
 
     def setup_ui(self):
@@ -97,6 +82,33 @@ class DictationApp(QWidget):
         space_shortcut.activated.connect(self.stop_recording)
         esc_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
         esc_shortcut.activated.connect(self.close)
+    
+    def setup_event_listeners(self):
+        """Set up event bus listeners for streaming transcription events"""
+        # Subscribe to transcript events (for future UI updates)
+        event_bus.subscribe(Events.TRANSCRIPT_PARTIAL, self._on_partial_transcript)
+        event_bus.subscribe(Events.TRANSCRIPT_FINAL, self._on_final_transcript)
+        event_bus.subscribe(Events.TRANSCRIPTION_STARTED, self._on_transcription_started)
+    
+    def _on_partial_transcript(self, data):
+        """Handle partial transcript events (placeholder for future UI updates)"""
+        if data and 'text' in data:
+            text = data['text']
+            logging.debug(f"Partial transcript received: {text}")
+            # Future UI update: could show partial results here
+    
+    def _on_final_transcript(self, data):
+        """Handle final transcript events (placeholder for future UI updates)"""
+        if data and 'text' in data:
+            text = data['text']
+            logging.info(f"Final transcript received: {text}")
+            # Future UI update: could show final results here
+    
+    def _on_transcription_started(self, data):
+        """Handle transcription started events"""
+        logging.debug("Transcription started")
+        # Update UI to show transcription in progress
+        self.status_label.setText("🔄 Transcribing...")
 
     def start_recording(self):
         self.recording_thread = RecordingThread()
@@ -108,20 +120,19 @@ class DictationApp(QWidget):
             self.status_label.setText("⏹️ Stopping recording...")
             self.recording_thread.stop_recording()
 
-    def on_recording_finished(self, audio_data):
-        if audio_data is not None and len(audio_data) > 0:
-            self.status_label.setText("🔄 Transcribing...")
+    def on_recording_finished(self, result):
+        """Handle recording finished - result is now the final transcribed text"""
+        if result and isinstance(result, str) and result.strip():
+            # We have a transcribed text result
+            text = result.strip()
+            self.hide()
             QApplication.processEvents()
-            text = self.transcriber.transcribe(audio_data)
-            if text and text.strip():
-                self.hide()
-                QApplication.processEvents()
-                QTimer.singleShot(500, lambda: self.paste_and_close(text.strip()))
-            else:
-                self.status_label.setText("❌ No speech detected")
-                QTimer.singleShot(2000, self.close)
+            QTimer.singleShot(500, lambda: self.paste_and_close(text))
+        elif result is None:
+            self.status_label.setText("❌ Recording failed")
+            QTimer.singleShot(2000, self.close)
         else:
-            self.status_label.setText("❌ No audio recorded")
+            self.status_label.setText("❌ No speech detected")
             QTimer.singleShot(2000, self.close)
 
     def paste_and_close(self, text: str):

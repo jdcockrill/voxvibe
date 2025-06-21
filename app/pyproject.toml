@@ -5,7 +5,7 @@ description = "A voice dictation application for Linux that captures audio and t
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "faster-whisper>=1.1.1",
+    "whisperflow==1.1.*",
     "numpy>=2.3.0",
     "pyqt6>=6.9.1",
     "qt-material>=2.17",
