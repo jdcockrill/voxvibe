@@ -288,10 +288,10 @@ class VoxVibeApp:
                     if self.tray_icon:
                         self.tray_icon.show_message("VoxVibe", "Text pasted successfully!", timeout=2000)
                 else:
-                    print("❌ Auto-paste failed - please press Ctrl+V")
+                    print("❌ Auto-paste failed - please press Ctrl+Shift+V")
                     if self.tray_icon:
                         self.tray_icon.show_message("VoxVibe - Paste Ready", 
-                                                  "Text copied to clipboard.\nPress Ctrl+V to paste.", 
+                                                  "Text copied to clipboard.\nPress Ctrl+Shift+V to paste.", 
                                                   timeout=5000)
             except Exception as e:
                 print(f"❌ Error pasting text: {e}")
