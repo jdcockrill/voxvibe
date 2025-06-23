@@ -17,9 +17,52 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--reset", action="store_true", help="Clear any stale single-instance lock and exit")
+    parser.add_argument("--service", action="store_true", help="Run as background service with system tray")
     args = parser.parse_args()
 
+    if args.service:
+        return run_service_mode(args)
+    else:
+        return run_normal_mode(args)
 
+
+def run_service_mode(args):
+    """Run VoxVibe as a background service with system tray"""
+    from .service import VoxVibeService
+    
+    # Different single-instance lock for service mode
+    try:
+        with SingleInstance("voxvibe_service_instance", reset=args.reset):
+            if args.reset:
+                logging.info("Service single-instance lock reset successfully.")
+                return 0
+
+            app = QApplication(sys.argv)
+            app.setQuitOnLastWindowClosed(False)  # Don't quit when windows are closed
+            app.setApplicationName("VoxVibe Service")
+            apply_theme(app)
+
+            # Check if system tray is available
+            from PyQt6.QtWidgets import QSystemTrayIcon
+            if not QSystemTrayIcon.isSystemTrayAvailable():
+                logging.error("System tray is not available on this system")
+                return 1
+
+            service = VoxVibeService(app)
+            if not service.start():
+                logging.error("Failed to start VoxVibe service")
+                return 1
+
+            logging.info("VoxVibe service started successfully")
+            return app.exec()
+            
+    except SingleInstanceError as e:
+        logging.error(e)
+        return 1
+
+
+def run_normal_mode(args):
+    """Run VoxVibe in normal (original) mode"""
     # ------------------------------------------------------------------
     # Single-instance guard
     # ------------------------------------------------------------------
@@ -51,10 +94,10 @@ def main():
             window.setWindowTitle("VoxVibe")
             window.show()
 
-            sys.exit(app.exec())
+            return app.exec()
     except SingleInstanceError as e:
         logging.error(e)
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
