@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBo
 
 from .audio_recorder import AudioRecorder
 from .dbus_window_manager import DBusWindowManager
+from .system_tray import SystemTrayIcon
 from .theme import EXTRA, apply_theme
 from .transcriber import Transcriber
 
@@ -35,6 +36,8 @@ class DictationApp(QWidget):
         self.transcriber = Transcriber()
         self.window_manager = window_manager
         self.recording_thread = None
+        self.tray_icon = SystemTrayIcon(self)
+        self.tray_icon.quit_requested.connect(QApplication.instance().quit)
         self.setup_ui()
         self.setup_shortcuts()
         QTimer.singleShot(500, self.start_recording)
@@ -147,4 +150,9 @@ class DictationApp(QWidget):
         if self.recording_thread and self.recording_thread.isRunning():
             self.recording_thread.stop_recording()
             self.recording_thread.wait()
+        if self.tray_icon:
+            self.tray_icon.hide()
+            self.tray_icon.deleteLater()
+            self.tray_icon = None
         event.accept()
+
