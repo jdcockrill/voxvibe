@@ -10,13 +10,10 @@ Usage::
 Pass ``reset=True`` to force removal of any stale socket before trying to
 acquire the lock.
 """
-from __future__ import annotations
-
 import logging
 from contextlib import AbstractContextManager
 from typing import Optional
 
-from PyQt6.QtCore import QObject
 from PyQt6.QtNetwork import QLocalServer, QLocalSocket
 
 logger = logging.getLogger(__name__)
