@@ -6,10 +6,10 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from .dbus_window_manager import DBusWindowManager
 from .single_instance import SingleInstance, SingleInstanceError
 from .theme import apply_theme
 from .ui import DictationApp
+from .window_manager import WindowManager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -82,7 +82,7 @@ def run_normal_mode(args):
             signal.signal(signal.SIGINT, signal.SIG_DFL)
 
             # Store the currently active window BEFORE creating the Qt app
-            window_manager = DBusWindowManager()
+            window_manager = WindowManager()
             window_manager.store_current_window()
 
             app = QApplication(sys.argv)

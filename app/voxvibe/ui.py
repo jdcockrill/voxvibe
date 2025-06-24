@@ -6,10 +6,10 @@ from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from .audio_recorder import AudioRecorder
-from .dbus_window_manager import DBusWindowManager
 from .system_tray import SystemTrayIcon
 from .theme import EXTRA, apply_theme
 from .transcriber import Transcriber
+from .window_manager import WindowManager
 
 
 class RecordingThread(QThread):
@@ -31,7 +31,7 @@ class RecordingThread(QThread):
         self.should_stop = True
 
 class DictationApp(QWidget):
-    def __init__(self, window_manager: DBusWindowManager):
+    def __init__(self, window_manager: WindowManager):
         super().__init__()
         self.transcriber = Transcriber()
         self.window_manager = window_manager

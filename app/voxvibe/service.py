@@ -2,14 +2,15 @@ import logging
 import signal
 from typing import Optional
 
-import pyperclip
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
 from .audio_recorder import AudioRecorder
-from .dbus_window_manager import DBusWindowManager
+from .hotkey_manager import HotkeyManager
+from .state_manager import StateManager
 from .system_tray import SystemTrayIcon
 from .transcriber import Transcriber
+from .window_manager import WindowManager
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,8 @@ class VoxVibeService(QObject):
         self.tray_icon: Optional[SystemTrayIcon] = None
         self.audio_recorder: Optional[AudioRecorder] = None
         self.transcriber: Optional[Transcriber] = None
-        self.window_manager: Optional[DBusWindowManager] = None
+        self.window_manager: Optional[WindowManager] = None
+        self.hotkey_manager: Optional[HotkeyManager] = None
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -41,6 +43,9 @@ class VoxVibeService(QObject):
     def _initialize_components(self):
         """Initialize all service components"""
         try:
+            # Initialize state manager first
+            self.state_manager = StateManager()
+            
             # Initialize transcriber
             self.transcriber = Transcriber()
             
@@ -48,11 +53,29 @@ class VoxVibeService(QObject):
             self.audio_recorder = AudioRecorder()
             
             # Initialize window manager
-            self.window_manager = DBusWindowManager()
+            self.window_manager = WindowManager()
+            
+            # Log window manager diagnostics
+            if self.window_manager.is_available():
+                active_strategy = self.window_manager.get_active_strategy_name()
+                available_strategies = self.window_manager.get_available_strategies()
+                logger.info(f"Window manager active strategy: {active_strategy}")
+                logger.info(f"Available strategies: {available_strategies}")
+            else:
+                logger.warning("No window manager strategies are available")
+                diagnostics = self.window_manager.get_diagnostics()
+                logger.debug(f"Window manager diagnostics: {diagnostics}")
             
             # Initialize system tray
             self.tray_icon = SystemTrayIcon(service_mode=True)
             self._connect_tray_signals()
+            
+            # Initialize hotkey manager
+            self.hotkey_manager = HotkeyManager()
+            self._connect_hotkey_signals()
+            
+            # Connect state manager signals
+            self._connect_state_signals()
             
             # Connect shutdown signal
             self.shutdown_requested.connect(self._shutdown)
@@ -68,37 +91,62 @@ class VoxVibeService(QObject):
         if not self.tray_icon:
             return
             
-        self.tray_icon.start_recording_requested.connect(self._start_recording)
-        self.tray_icon.stop_recording_requested.connect(self._stop_recording)
+        self.tray_icon.start_recording_requested.connect(self._start_recording_via_state)
+        self.tray_icon.stop_recording_requested.connect(self._stop_recording_via_state)
+        self.tray_icon.toggle_recording_requested.connect(self._toggle_recording)
         self.tray_icon.settings_requested.connect(self._show_settings)
         self.tray_icon.history_requested.connect(self._show_history)
         self.tray_icon.quit_requested.connect(self.shutdown_requested.emit)
         
-    def start(self):
-        """Start the service"""
-        if not self.tray_icon:
-            logger.error("System tray not initialized")
-            return False
+    def _connect_hotkey_signals(self):
+        """Connect hotkey manager signals"""
+        if not self.hotkey_manager:
+            return
             
-        if not QSystemTrayIcon.isSystemTrayAvailable():
-            logger.error("System tray not available")
-            return False
+        self.hotkey_manager.hotkey_pressed.connect(self._toggle_recording)
+        
+    def _connect_state_signals(self):
+        """Connect state manager signals"""
+        if not self.state_manager or not self.tray_icon:
+            return
             
-        self.tray_icon.show()
-        self.tray_icon.showMessage(
-            "VoxVibe",
-            "Voice dictation service started",
-            SystemTrayIcon.MessageIcon.Information,
-            2000
-        )
+        # Update tray icon when state changes
+        self.state_manager.state_changed.connect(self._on_state_changed)
+        self.state_manager.processing_completed.connect(self._on_transcription_complete)
+        self.state_manager.error_occurred.connect(self._on_error)
         
-        logger.info("VoxVibe service started")
-        return True
+        # Connect recording workflow signals
+        self.state_manager.recording_started.connect(self._do_start_recording_workflow)
+        self.state_manager.recording_stopped.connect(self._do_stop_recording_workflow)
         
-    def _start_recording(self):
-        """Start audio recording"""
+    def _on_state_changed(self, state):
+        """Handle state changes"""
+        if self.tray_icon:
+            self.tray_icon.set_recording_state(state.value)
+            
+    def _on_transcription_complete(self, text: str):
+        """Handle transcription completion"""
+        self._paste_transcription(text)
+        
+    def _on_error(self, error_message: str):
+        """Handle error states"""
+        # if self.tray_icon:
+        #     self.tray_icon.showMessage(
+        #         "VoxVibe Error",
+        #         error_message,
+        #         SystemTrayIcon.MessageIcon.Critical,
+        #         5000
+        #     )
+        # Reset to idle after error
+        if self.state_manager:
+            QTimer.singleShot(2000, self.state_manager.reset_to_idle)
+            
+    def _do_start_recording_workflow(self):
+        """Execute the recording start workflow without state management"""
         if not self.audio_recorder or not self.window_manager:
             logger.error("Components not initialized")
+            if self.state_manager:
+                self.state_manager.set_error("Components not initialized")
             return
             
         try:
@@ -106,83 +154,113 @@ class VoxVibeService(QObject):
             self.window_manager.store_current_window()
             logger.info("Stored current window for later focus")
             
-            # Update tray icon state
-            self.tray_icon.set_recording_state("recording")
-            
             # Start recording
             self.audio_recorder.start_recording()
             logger.info("Recording started")
             
         except Exception as e:
             logger.error(f"Failed to start recording: {e}")
-            self.tray_icon.set_recording_state("idle")
-            
-    def _stop_recording(self):
-        """Stop audio recording and process transcription"""
+            if self.state_manager:
+                self.state_manager.set_error(f"Failed to start recording: {e}")
+                
+    def _do_stop_recording_workflow(self):
+        """Execute the recording stop workflow without state management"""
         if not self.audio_recorder or not self.transcriber:
             logger.error("Components not initialized")
+            if self.state_manager:
+                self.state_manager.set_error("Components not initialized")
             return
             
         try:
             # Stop recording and get audio data
-            self.tray_icon.set_recording_state("processing")
             audio_data = self.audio_recorder.stop_recording()
             
             if audio_data is None or len(audio_data) == 0:
                 logger.warning("No audio data recorded")
-                self.tray_icon.set_recording_state("idle")
+                if self.state_manager:
+                    self.state_manager.set_error("No audio data recorded")
                 return
-                
+
             # Transcribe audio
             transcription = self.transcriber.transcribe(audio_data)
-            
+
             if transcription and transcription.strip():
-                # Focus original window and paste text
-                self._paste_transcription(transcription.strip())
+                # Complete processing with transcription
+                if self.state_manager:
+                    self.state_manager.complete_processing(transcription.strip())
                 logger.info(f"Transcription completed: {transcription[:50]}...")
             else:
                 logger.warning("No transcription generated")
-                
+                if self.state_manager:
+                    self.state_manager.set_error("No transcription generated")
+
         except Exception as e:
             logger.error(f"Failed during recording processing: {e}")
-        finally:
-            self.tray_icon.set_recording_state("idle")
-            
+            if self.state_manager:
+                self.state_manager.set_error(f"Recording processing failed: {e}")
+
+    def start(self):
+        """Start the service"""
+        if not self.tray_icon:
+            logger.error("System tray not initialized")
+            return False
+
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            logger.error("System tray not available")
+            return False
+
+        self.tray_icon.show()
+
+        if self.hotkey_manager:
+            success = self.hotkey_manager.start()
+            if success:
+                logger.info("Global hotkey manager started")
+            else:
+                logger.warning("Failed to start global hotkey manager")
+        
+        logger.info("VoxVibe service started")
+        return True
+
+    def _toggle_recording(self):
+        """Toggle recording state via hotkey or tray click"""
+        if not self.state_manager:
+            logger.error("State manager not initialized")
+            return
+
+        success = self.state_manager.toggle_recording()
+        if not success:
+            logger.warning("Failed to toggle recording state")
+
+    def _start_recording_via_state(self):
+        """Start recording via state manager (for direct tray menu actions)"""
+        if not self.state_manager:
+            logger.error("State manager not initialized")
+            return
+        self.state_manager.start_recording()
+
+    def _stop_recording_via_state(self):
+        """Stop recording via state manager (for direct tray menu actions)"""
+        if not self.state_manager:
+            logger.error("State manager not initialized")
+            return
+        self.state_manager.stop_recording()
+
     def _paste_transcription(self, text: str):
         """Paste transcription to the previously focused window"""
         if not self.window_manager:
             logger.warning("No window manager available")
             return
-            
+
         try:
             success = self.window_manager.focus_and_paste(text)
             if success:
                 logger.info("Text pasted successfully")
             else:
-                logger.warning("Failed to paste text, falling back to clipboard")
-                # Fallback: copy to clipboard
-                pyperclip.copy(text)
-                self.tray_icon.showMessage(
-                    "VoxVibe",
-                    "Transcription copied to clipboard",
-                    SystemTrayIcon.MessageIcon.Information,
-                    3000
-                )
-                
+                logger.warning("Failed to paste text.")
+
         except Exception as e:
             logger.error(f"Failed to paste transcription: {e}")
-            # Fallback: copy to clipboard
-            try:
-                pyperclip.copy(text)
-                self.tray_icon.showMessage(
-                    "VoxVibe",
-                    "Transcription copied to clipboard (fallback)",
-                    SystemTrayIcon.MessageIcon.Information,
-                    3000
-                )
-            except Exception as fallback_error:
-                logger.error(f"Even fallback clipboard copy failed: {fallback_error}")
-            
+
     def _show_settings(self):
         """Show settings dialog (placeholder for future implementation)"""
         self.tray_icon.showMessage(
@@ -191,7 +269,7 @@ class VoxVibeService(QObject):
             SystemTrayIcon.MessageIcon.Information,
             2000
         )
-        
+
     def _show_history(self):
         """Show transcription history (placeholder for future implementation)"""
         self.tray_icon.showMessage(
@@ -200,18 +278,22 @@ class VoxVibeService(QObject):
             SystemTrayIcon.MessageIcon.Information,
             2000
         )
-        
+
     def _shutdown(self):
         """Gracefully shutdown the service"""
         logger.info("Shutting down VoxVibe service...")
-        
+
+        # Stop hotkey manager  
+        if self.hotkey_manager:
+            self.hotkey_manager.stop()
+
         # Stop any ongoing recording
         if self.audio_recorder and self.audio_recorder.is_recording:
             self.audio_recorder.stop_recording()
-            
+
         # Hide tray icon
         if self.tray_icon:
             self.tray_icon.hide()
-            
+
         # Quit application
         QTimer.singleShot(100, self.app.quit)

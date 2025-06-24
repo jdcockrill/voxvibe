@@ -1,14 +1,13 @@
-import logging
-
-from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QIcon
-from PyQt6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
 
 class SystemTrayIcon(QSystemTrayIcon):
     quit_requested = pyqtSignal()
     start_recording_requested = pyqtSignal()
     stop_recording_requested = pyqtSignal()
+    toggle_recording_requested = pyqtSignal()
     settings_requested = pyqtSignal()
     history_requested = pyqtSignal()
 
@@ -61,22 +60,27 @@ class SystemTrayIcon(QSystemTrayIcon):
 
     def _add_actions(self):
         if self.service_mode:
-            self.start_action = self._menu.addAction("Start Recording")
-            self.stop_action = self._menu.addAction("Stop Recording")
-            self.stop_action.setEnabled(False)  # Disabled initially
+            # Primary toggle action
+            self.toggle_action = self._menu.addAction("Start Recording")
+            self.toggle_action.triggered.connect(self._on_toggle_recording_requested)
             self._menu.addSeparator()
             
             settings_action = self._menu.addAction("Settings")
             history_action = self._menu.addAction("History")
             self._menu.addSeparator()
             
-            self.start_action.triggered.connect(self.start_recording_requested.emit)
-            self.stop_action.triggered.connect(self.stop_recording_requested.emit)
             settings_action.triggered.connect(self.settings_requested.emit)
             history_action.triggered.connect(self.history_requested.emit)
             
         quit_action = self._menu.addAction("Quit")
         quit_action.triggered.connect(self.quit_requested.emit)
+
+    def _on_toggle_recording_requested(self):
+        if self.toggle_action.text() == "Start Recording":
+            self.toggle_action.setText("Stop Recording")
+        else:
+            self.toggle_action.setText("Start Recording")
+        self.toggle_recording_requested.emit()
 
     def set_recording_state(self, state):
         """Update the recording state and icon"""
@@ -93,17 +97,20 @@ class SystemTrayIcon(QSystemTrayIcon):
             self.setToolTip("VoxVibe - Processing...")
         else:
             self.setToolTip("VoxVibe - Ready")
-            
+
         # Update menu actions if in service mode
         if self.service_mode:
-            self.start_action.setEnabled(state == "idle")
-            self.stop_action.setEnabled(state == "recording")
+            # Update toggle action text based on state
+            if state == "idle":
+                self.toggle_action.setText("Start Recording")
+            elif state == "recording":
+                self.toggle_action.setText("Stop Recording")
+            else:  # processing
+                self.toggle_action.setText("Processing...")
+            self.toggle_action.setEnabled(state in ["idle", "recording"])
 
     def _on_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             if self.service_mode:
                 # In service mode, single click toggles recording
-                if self.recording_state == "idle":
-                    self.start_recording_requested.emit()
-                elif self.recording_state == "recording":
-                    self.stop_recording_requested.emit()
+                self.toggle_recording_requested.emit()

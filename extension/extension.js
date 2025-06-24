@@ -22,19 +22,6 @@ export default class DictationWindowExtension extends Extension {
         this._dbusImpl = null;
         this._setupDBusService();
         this._connectSignals();
-
-        // Add panel indicator with microphone icon (native, no tooltip)
-        this._trayButton = new PanelMenu.Button(0.0, 'VoxVibe Indicator', false);
-        const icon = new St.Icon({
-            icon_name: 'audio-input-microphone-symbolic',
-            style_class: 'system-status-icon',
-        });
-        this._trayButton.add_child(icon);
-        // Add menu item showing app name and version (non-interactive)
-        const appInfoItem = new PopupMenu.PopupMenuItem('VoxVibe v1');
-        appInfoItem.setSensitive(false);
-        this._trayButton.menu.addMenuItem(appInfoItem);
-        Main.panel.addToStatusArea('voxvibe-indicator', this._trayButton);
     }
 
     disable() {
@@ -44,11 +31,6 @@ export default class DictationWindowExtension extends Extension {
         }
         if (this._focusSignal) {
             global.display.disconnect(this._focusSignal);
-        }
-        // Remove panel indicator
-        if (this._trayButton) {
-            this._trayButton.destroy();
-            this._trayButton = null;
         }
     }
 
@@ -111,7 +93,7 @@ export default class DictationWindowExtension extends Extension {
     }
 
     _triggerPasteHack() {
-        globalThis.log?.(`[VoxVibe] _triggerPasteHack: Will simulate Ctrl+V after delay`);
+        globalThis.log?.(`[VoxVibe] _triggerPasteHack: Will simulate Ctrl+Shift+V after delay`);
         // Use a 100ms delay to ensure clipboard is set
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
             try {
@@ -119,13 +101,17 @@ export default class DictationWindowExtension extends Extension {
                 const virtualDevice = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
                 // Press Ctrl
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+                // Press Shift
+                // virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Shift_L, Clutter.KeyState.PRESSED);
                 // Press V
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_v, Clutter.KeyState.PRESSED);
                 // Release V
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_v, Clutter.KeyState.RELEASED);
+                // Release Shift
+                // virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Shift_L, Clutter.KeyState.RELEASED);
                 // Release Ctrl
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
-                globalThis.log?.(`[VoxVibe] _triggerPasteHack: Ctrl+V simulated successfully`);
+                globalThis.log?.(`[VoxVibe] _triggerPasteHack: Ctrl+Shift+V simulated successfully`);
             } catch (pasteErr) {
                 globalThis.log?.(`[VoxVibe] ERROR during _triggerPasteHack: ${pasteErr}`);
             }
