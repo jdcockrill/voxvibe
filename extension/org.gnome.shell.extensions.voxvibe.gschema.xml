@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.voxvibe" path="/org/gnome/shell/extensions/voxvibe/">
+    <key name="launch-hotkey" type="as">
+      <default><![CDATA[['<Super>X']]]></default>
+      <summary>Hotkey to launch VoxVibe (default: Super+X)</summary>
+    </key>
+  </schema>
+</schemalist>

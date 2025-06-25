@@ -1,13 +1,23 @@
 // extension.js - GNOME Extension for Dictation App Window Management
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
-import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
+
+// High-level DBus proxy for the Python VoxVibe service
+const VoxVibeServiceProxy = Gio.DBusProxy.makeProxyWrapper(`
+    <node>
+        <interface name="app.voxvibe.Service">
+            <method name="TriggerHotkey"/>
+        </interface>
+    </node>`);
+
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 /**
  * @class DictationWindowExtension
@@ -20,11 +30,30 @@ export default class DictationWindowExtension extends Extension {
     enable() {
         this._lastFocusedWindow = null;
         this._dbusImpl = null;
+        globalThis.log?.('[VoxVibe] enabling extension');
         this._setupDBusService();
+        globalThis.log?.('[VoxVibe] DBus service setup');
         this._connectSignals();
+        globalThis.log?.('[VoxVibe] signals connected');
+        this._settings = this._settings || this.getSettings();
+        globalThis.log?.('[VoxVibe] settings loaded');
+        globalThis.log?.('[VoxVibe] importing GNOME modules');
+        const action = Main.wm.addKeybinding(
+            'launch-hotkey',
+            this._settings,
+            Meta.KeyBindingFlags.IGNORE_AUTOREPEAT,
+            Shell.ActionMode.ALL,
+            this._onHotkey.bind(this)
+        );
+        if (action === imports.gi.Meta.KeyBindingAction.NONE) {
+            globalThis.log?.('[VoxVibe] Failed to register hotkey – action NONE');
+        } else {
+            globalThis.log?.('[VoxVibe] Hotkey registered, action: ' + action);
+        }
     }
 
     disable() {
+        Main.wm.removeKeybinding('launch-hotkey');
         if (this._dbusImpl) {
             this._dbusImpl.unexport();
             this._dbusImpl = null;
@@ -54,6 +83,34 @@ export default class DictationWindowExtension extends Extension {
 
         this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(VoxVibeInterface, this);
         this._dbusImpl.export(Gio.DBus.session, '/org/gnome/Shell/Extensions/VoxVibe');
+    }
+
+    _onHotkey() {
+        globalThis.log?.('[VoxVibe] Super+X hotkey activated!');
+        this._triggerPythonHotkey();
+    }
+
+    _triggerPythonHotkey() {
+        try {
+            if (!this._voxProxy) {
+                this._voxProxy = new VoxVibeServiceProxy(
+                    Gio.DBus.session,
+                    'app.voxvibe.Service', // Service name from Python
+                    '/app/voxvibe/Service' // Object path
+                );
+            }
+            // Use the asynchronous D-Bus method to avoid blocking the GNOME Shell
+            // JS thread. The Remote variant returns immediately and delivers the
+            // call in the background, preventing UI hangs.
+            this._voxProxy.TriggerHotkeyRemote((result, error) => {
+                if (error) {
+                    globalThis.log?.(`[VoxVibe] TriggerHotkeyRemote error: ${error}`);
+                }
+            });
+            globalThis.log?.('[VoxVibe] TriggerHotkey DBus call sent');
+        } catch (err) {
+            globalThis.log?.(`[VoxVibe] Failed to call TriggerHotkey: ${err}`);
+        }
     }
 
     _connectSignals() {

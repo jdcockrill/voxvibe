@@ -1,16 +1,25 @@
 import logging
 import signal
-from typing import Optional
+from typing import Literal, Optional
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
 from .audio_recorder import AudioRecorder
-from .hotkey_manager import HotkeyManager
+from .hotkey_manager import AbstractHotkeyManager, dbus_hotkey_manager, qt_hotkey_manager
 from .state_manager import StateManager
 from .system_tray import SystemTrayIcon
 from .transcriber import Transcriber
 from .window_manager import WindowManager
+
+
+# Helper to select implementation
+def get_hotkey_manager(impl: Literal["dbus", "qt"] = "dbus") -> AbstractHotkeyManager:
+    if impl == "qt":
+        return qt_hotkey_manager.QtHotkeyManager()
+    # Default to DBus
+    return dbus_hotkey_manager.DBusHotkeyManager()
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +36,7 @@ class VoxVibeService(QObject):
         self.audio_recorder: Optional[AudioRecorder] = None
         self.transcriber: Optional[Transcriber] = None
         self.window_manager: Optional[WindowManager] = None
-        self.hotkey_manager: Optional[HotkeyManager] = None
+        self.hotkey_manager: Optional[AbstractHotkeyManager] = None
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -71,7 +80,7 @@ class VoxVibeService(QObject):
             self._connect_tray_signals()
             
             # Initialize hotkey manager
-            self.hotkey_manager = HotkeyManager()
+            self.hotkey_manager = get_hotkey_manager()
             self._connect_hotkey_signals()
             
             # Connect state manager signals
