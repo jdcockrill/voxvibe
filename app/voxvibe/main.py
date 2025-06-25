@@ -4,14 +4,14 @@ import logging
 import signal
 import sys
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
 from .single_instance import SingleInstance, SingleInstanceError
 from .theme import apply_theme
 from .ui import DictationApp
 from .window_manager import WindowManager
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - VoxVibe - %(name)s - %(levelname)s - %(message)s')
 
 
 def main():
@@ -43,7 +43,6 @@ def run_service_mode(args):
             apply_theme(app)
 
             # Check if system tray is available
-            from PyQt6.QtWidgets import QSystemTrayIcon
             if not QSystemTrayIcon.isSystemTrayAvailable():
                 logging.error("System tray is not available on this system")
                 return 1
