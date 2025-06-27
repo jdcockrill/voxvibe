@@ -94,6 +94,12 @@ voxvibe/
 For further development details on specific components, you can explore their respective directories.
 The `app/README.md` can be used for more detailed notes on Python app development, and `extension/README.md` for extension-specific development notes.
 
+### Credits
+
+A special thanks to the following people for their contributions:
+
+- **[dkh99](https://github.com/dkh99):** For significant contributions to the design of the user experience.
+
 ### Release
 
 To release a new version, follow these steps:
