@@ -81,15 +81,10 @@ jobs:
             
             ### Installation
             
-            #### From Release Package (Recommended)
+            #### From Release Package
             1. Download `voxvibe-${{ steps.version.outputs.VERSION }}.tar.gz`
             2. Extract: `tar -xzf voxvibe-${{ steps.version.outputs.VERSION }}.tar.gz`
             3. Run: `cd voxvibe-${{ steps.version.outputs.VERSION }} && ./install.sh`
-            
-            #### From Python Wheel
-            1. Download the `.whl` file
-            2. Install: `pipx install voxvibe-${{ steps.version.outputs.VERSION }}-*.whl`
-            3. Manually install the GNOME extension from the release package
             
             ### Requirements
             - Python 3.11+
