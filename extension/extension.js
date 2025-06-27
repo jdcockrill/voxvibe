@@ -163,13 +163,13 @@ export default class DictationWindowExtension extends Extension {
                 // Press Ctrl
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
                 // Press Shift
-                // virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Shift_L, Clutter.KeyState.PRESSED);
+                virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Shift_L, Clutter.KeyState.PRESSED);
                 // Press V
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_v, Clutter.KeyState.PRESSED);
                 // Release V
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_v, Clutter.KeyState.RELEASED);
                 // Release Shift
-                // virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Shift_L, Clutter.KeyState.RELEASED);
+                virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Shift_L, Clutter.KeyState.RELEASED);
                 // Release Ctrl
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
                 globalThis.log?.(`[VoxVibe] _triggerPasteHack: Ctrl+Shift+V simulated successfully`);

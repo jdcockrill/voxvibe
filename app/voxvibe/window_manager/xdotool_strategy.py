@@ -135,9 +135,9 @@ class XdotoolWindowManagerStrategy(WindowManagerStrategy):
             # Small delay to ensure clipboard is updated
             time.sleep(0.05)
 
-            # Simulate Ctrl+v
+            # Simulate Ctrl+Shift+V (unformatted paste)
             result = subprocess.run(
-                ["xdotool", "key", "--clearmodifiers", "--window", window_id, "ctrl+v"], capture_output=True, timeout=5
+                ["xdotool", "key", "--clearmodifiers", "--window", window_id, "ctrl+shift+v"], capture_output=True, timeout=5
             )
             return result.returncode == 0
 
