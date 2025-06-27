@@ -71,7 +71,7 @@ export default class DictationWindowExtension extends Extension {
                     <arg type="s" direction="out" name="windowId"/>
                 </method>
                 <method name="FocusAndPaste">
-                    <arg type="s" direction="in" name="windowId"/>
+                    <arg type="u" direction="in" name="windowId"/>
                     <arg type="s" direction="in" name="text"/>
                     <arg type="b" direction="out" name="success"/>
                 </method>
@@ -121,22 +121,26 @@ export default class DictationWindowExtension extends Extension {
                 this._lastFocusedWindow = focusedWindow;
                 // Emit signal to notify dictation app
                 this._dbusImpl.emit_signal('WindowFocused', 
-                    GLib.Variant.new('(s)', [this._getWindowId(focusedWindow)]));
+                    GLib.Variant.new('(s)', [this._getWindowInfo(focusedWindow)]));
             }
         });
     }
 
-    _getWindowId(window) {
-        globalThis.log?.(`[VoxVibe] Window ID: ${window.get_pid()}-${window.get_id()}`);
-        // Create a unique identifier for the window
-        return `${window.get_pid()}-${window.get_id()}`;
+    _getWindowInfo(window) {
+        const windowInfo = {
+            title: window.get_title() || "",
+            wm_class: window.get_wm_class() || "",
+            id: window.get_id()
+        };
+        globalThis.log?.(`[VoxVibe] Window Info: ${JSON.stringify(windowInfo)}`);
+        return JSON.stringify(windowInfo);
     }
 
     // D-Bus method implementations
     GetFocusedWindow() {
         let result = '';
         if (this._lastFocusedWindow && !this._lastFocusedWindow.destroyed) {
-            result = this._getWindowId(this._lastFocusedWindow);
+            result = this._getWindowInfo(this._lastFocusedWindow);
         }
         globalThis.log?.(`[VoxVibe] GetFocusedWindow called, returning: ${result}`);
         return result;
@@ -186,7 +190,7 @@ export default class DictationWindowExtension extends Extension {
             let found = false;
             for (let windowActor of windows) {
                 const window = windowActor.get_meta_window();
-                if (this._getWindowId(window) === windowId) {
+                if (window.get_id() === windowId) {
                     globalThis.log?.(`[VoxVibe] Step 1: Focusing window ${windowId}`);
                     window.activate(global.get_current_time());
                     found = true;

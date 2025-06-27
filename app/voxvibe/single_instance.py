@@ -10,6 +10,7 @@ Usage::
 Pass ``reset=True`` to force removal of any stale socket before trying to
 acquire the lock.
 """
+
 import logging
 from contextlib import AbstractContextManager
 from typing import Optional

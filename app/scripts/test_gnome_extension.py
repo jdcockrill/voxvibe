@@ -6,6 +6,7 @@ BUS_NAME = "org.gnome.Shell"
 OBJECT_PATH = "/org/gnome/Shell/Extensions/VoxVibe"
 INTERFACE = "org.gnome.Shell.Extensions.VoxVibe"
 
+
 def main():
     bus = QDBusConnection.sessionBus()
     iface = QDBusInterface(BUS_NAME, OBJECT_PATH, INTERFACE, bus)
@@ -38,6 +39,7 @@ def main():
 
     success = bool(reply.arguments()[0]) if reply.arguments() else False
     print("FocusAndPaste success:", success)
+
 
 if __name__ == "__main__":
     main()

@@ -1,114 +1,79 @@
-# VoxVibe Monorepo
+# VoxVibe
 
-This repository contains two components:
+**Voice dictation that just works.** Press `Super+X` anywhere in GNOME, speak your thoughts, and watch your words appear exactly where you need them.
 
-- `app/` — Python + Qt6 transcription application
-- `extension/` — GNOME Shell extension for window focus and pasting
+VoxVibe seamlessly integrates into your Linux workflow with local AI transcription - fast and accurate speech-to-text that works where you are.
 
 Built with [Claude Code](https://www.anthropic.com/claude-code) and [Windsurf](https://windsurf.com/).
 
-## Prerequisites
+## Installation
 
-1.  **Clone the repository**
-2.  **Install Python:** Ensure you have Python 3.11 or newer.
-3.  **Install `uv`:** If you don't have `uv` (a fast Python package installer and resolver), install it by following the official instructions at [https://github.com/astral-sh/uv](https://github.com/astral-sh/uv).
-4.  **Install `pipx`:** If you don't have `pipx` (a tool for installing and managing Python packages), install it by following the official instructions at [https://pipx.readthedocs.io/en/stable/](https://pipx.readthedocs.io/en/stable/).
-5.  **Install PortAudio system dependency:** VoxVibe uses sounddevice which requires PortAudio. Install it using your system's package manager:
-    - **Ubuntu/Debian:** `sudo apt install -y portaudio19-dev`
-    - **Fedora:** `sudo dnf install portaudio portaudio-devel`
-    - **Arch Linux:** `sudo pacman -S portaudio`
+1. **Install system dependencies:**
+   ```bash
+   # Ubuntu/Debian
+   sudo apt install -y portaudio19-dev pipx
+   
+   # Fedora
+   sudo dnf install portaudio portaudio-devel pipx
+   # Fedora users also need AppIndicator extension for system tray:
+   # https://github.com/ubuntu/gnome-shell-extension-appindicator
+   
+   # Arch Linux
+   sudo pacman -S portaudio python-pipx
+   ```
 
-Note: `pipx` isn't _strictly_ required. It just makes the creation of the Custom Keyboard Shortcut much simpler.
-
-## Installation and Setup
-
-This project consists of a GNOME Shell Extension and a Python application. Both need to be set up.
-
-### Installation via the Makefile
-
-To install both the Python application and the GNOME Shell extension using the Makefile, follow these steps:
-
-1. **Check prerequisites** (see above): Ensure you have Python 3.11+, `uv` and `pipx` installed.
-
-2. **Run the main setup command:**
-    ```bash
-    make all
-    ```
-    This will:
-    - Set up the Python application environment and build it (`make app`)
-    - Install the Python application locally via `pipx` (`make install`)
-    - Install and enable the GNOME Shell extension (`make extension`)
-
-    After completion, you should see a message indicating setup is complete.
+2. **Download and run the installer:**
+   ```bash
+   # Download latest release
+   curl -L https://github.com/jamiecockrill/voice-flow/releases/latest/download/voxvibe-installer.tar.gz | tar -xz
+   cd voxvibe-installer
+   ./install.sh
+   ```
 
 3. **Reload GNOME Shell:**
-    - On X11: Press <kbd>Alt</kbd> + <kbd>F2</kbd>, type `r`, and press <kbd>Enter</kbd>
-    - On Wayland: Log out and log back in
+   - **X11:** Press `Alt+F2`, type `r`, press Enter
+   - **Wayland:** Log out and log back in
 
-After installation, follow the instructions in the [Create Custom Keyboard Shortcut for VoxVibe](#create-custom-keyboard-shortcut-for-voxvibe) section to set up a convenient way to launch the Python app. You should also see the extension active in GNOME Shell.
+That's it! Use `Super+X` to start voice dictation.
 
-### Manual Installation
+## Architecture
 
-If you prefer to install the components manually, follow these steps.
+VoxVibe consists of two main components that communicate via DBus:
 
-#### 1. GNOME Shell Extension Installation
-
-1.  **Install Files:**
-    ```bash
-    mkdir -p ~/.local/share/gnome-shell/extensions/voxvibe@voxvibe.app
-    cp -r extension/* ~/.local/share/gnome-shell/extensions/voxvibe@voxvibe.app/
-    ```
-2.  **Reload & Enable:** Reload GNOME Shell and then enable the extension:
-    ```bash
-    gnome-extensions enable voxvibe@voxvibe.app
-    ```
-    For Wayland, you need to log out and log in again. You should see a microphone icon
-    appear in the system tray.
-
-#### 2. VoxVibe Application Installation
-
-You can install the application using `pipx`.
-
-1.  **Build the App:**
-    ```bash
-    cd app
-    uv sync
-    uv build
-    ```
-2.  **Install the App:**
-    ```bash
-    pipx install app/dist/voxvibe-*.whl
-    ```
-
-If you make changes to the application yourself and want to reinstall it, you can use the `--force` flag:
-```bash
-pipx install --force app/dist/voxvibe-*.whl
+```
+┌─────────────────────────────┐         ┌─────────────────────────────┐
+│      GNOME Extension        │         │      Python Application     │
+│     (extension.js)          │◄────────┤       (voxvibe)             │
+│                             │  DBus   │                             │
+│ • Captures hotkey           │         │ • Audio recording           │
+│ • Tracks focused windows    │         │ • Speech transcription      │
+│ • Pastes text via clipboard │         │ • Service orchestration     │
+│ • System tray indicator     │         │ • Window management         │
+└─────────────────────────────┘         └─────────────────────────────┘
 ```
 
-### Create Custom Keyboard Shortcut for VoxVibe
+**Data Flow:**
+1. **Hotkey Trigger** → Extension captures keyboard shortcut and signals Python app
+2. **Window Tracking** → Python app requests current focused window ID from extension  
+3. **Audio Processing** → Python app records and transcribes speech independently
+4. **Text Pasting** → Python app sends transcribed text back to extension for pasting
 
-To easily launch VoxVibe:
+**GNOME Extension** handles all desktop integration:
+- Registers global keyboard shortcuts
+- Maintains window focus tracking
+- Provides system tray presence
+- Simulates text pasting via clipboard + Ctrl+V
 
-1.  Open **GNOME Settings**.
-2.  Navigate to **Keyboard** -> **View and Customize Shortcuts**.
-3.  Select **Custom Shortcuts** and click **+**.
-4.  In the dialog:
-    *   **Name:** `VoxVibe`
-    *   **Command:** `voxvibe`
-    *   **Shortcut:** Press your desired key combination (e.g., `Super+F2`).
-5.  Click **Add**.
-
-Now, your keyboard shortcut is ready to use.
-
-Note: if you don't have `pipx` installed, your command will need to be something much longer, such as:
-
-```bash
-/path/to/project/app/.venv/bin/voxvibe
-```
+**Python Application** handles all AI processing:
+- Captures audio from microphone
+- Transcribes speech using Whisper AI
+- Orchestrates the complete workflow
+- Communicates with extension via DBus
 
 ## Development
 
 ### Directory Structure
+
 ```
 voxvibe/
 ├── app/         # Python transcription app (source, pyproject.toml)
@@ -117,6 +82,7 @@ voxvibe/
 ```
 
 ---
+
 For further development details on specific components, you can explore their respective directories.
 The `app/README.md` can be used for more detailed notes on Python app development, and `extension/README.md` for extension-specific development notes.
 
