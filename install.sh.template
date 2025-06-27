@@ -96,7 +96,6 @@ After=graphical-session.target
 Type=simple
 ExecStart=$VOXVIBE_PATH
 Restart=on-failure
-Environment=DISPLAY=:0
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=voxvibe
