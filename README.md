@@ -70,6 +70,14 @@ VoxVibe consists of two main components that communicate via DBus:
 - Orchestrates the complete workflow
 - Communicates with extension via DBus
 
+### Why Two Components?
+
+The split architecture (Python backend + GNOME Shell extension) was chosen for reliability and cross-compatibility:
+
+- **Reliable Keyboard Shortcuts:** The GNOME extension provides a robust way to capture global hotkeys (`Super+X`) that works consistently across the desktop. Python libraries for this (like `pynput` or `keyboard`) can be unreliable, especially with different window managers.
+- **Wayland & X11 Compatibility:** By letting the GNOME extension handle window interactions (like pasting text), we get a single solution that works for both Wayland and X11 display servers. This avoids writing and maintaining separate, complex code for each.
+- **Focus on Strengths:** Each component does what it's best at. The extension handles deep GNOME integration, while the Python application manages the heavy lifting of audio processing and AI transcription.
+
 ## Development
 
 ### Directory Structure
