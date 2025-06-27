@@ -24,10 +24,7 @@ Built with [Claude Code](https://www.anthropic.com/claude-code) and [Windsurf](h
 
 2. **Download and run the installer:**
    ```bash
-   # Download latest release
-   curl -L https://github.com/jamiecockrill/voice-flow/releases/latest/download/voxvibe-installer.tar.gz | tar -xz
-   cd voxvibe-installer
-   ./install.sh
+   curl -sSL https://raw.githubusercontent.com/jdcockrill/voxvibe/main/install.sh | bash
    ```
 
 3. **Reload GNOME Shell:**
@@ -40,7 +37,7 @@ That's it! Use `Super+X` to start voice dictation.
 
 VoxVibe consists of two main components that communicate via DBus:
 
-```
+```text
 ┌─────────────────────────────┐         ┌─────────────────────────────┐
 │      GNOME Extension        │         │      Python Application     │
 │     (extension.js)          │◄────────┤       (voxvibe)             │
@@ -82,7 +79,7 @@ The split architecture (Python backend + GNOME Shell extension) was chosen for r
 
 ### Directory Structure
 
-```
+```text
 voxvibe/
 ├── app/         # Python transcription app (source, pyproject.toml)
 ├── extension/   # GNOME Shell extension (extension.js, metadata.json)

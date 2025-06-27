@@ -73,7 +73,7 @@ fi
 echo "Installing VoxVibe {{VERSION}}..."
 
 # Install Python package
-pipx install --force app/*.whl
+pipx install app/*.whl
 
 # Get the actual installation path from pipx
 VOXVIBE_PATH=$(which voxvibe)
