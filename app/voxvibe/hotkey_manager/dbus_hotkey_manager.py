@@ -8,14 +8,14 @@ from .base import AbstractHotkeyManager
 
 logger = logging.getLogger(__name__)
 
-DBUS_SERVICE = 'app.voxvibe.Service'
-DBUS_OBJECT_PATH = '/app/voxvibe/Service'
-DBUS_INTERFACE = 'app.voxvibe.Service'
+DBUS_SERVICE = "app.voxvibe.Service"
+DBUS_OBJECT_PATH = "/app/voxvibe/Service"
+DBUS_INTERFACE = "app.voxvibe.Service"
 
 
 class DBusHotkeyManager(AbstractHotkeyManager):
     """Hotkey manager that exposes a DBus method for triggering the hotkey from external apps/extensions."""
-    
+
     def __init__(self):
         super().__init__()
         self._is_active = False
@@ -51,9 +51,7 @@ class DBusHotkeyManager(AbstractHotkeyManager):
                 self._bus.unregisterObject(DBUS_OBJECT_PATH)
                 return False
 
-            logger.info(
-                "Registered DBus hotkey service: %s at %s", DBUS_SERVICE, DBUS_OBJECT_PATH
-            )
+            logger.info("Registered DBus hotkey service: %s at %s", DBUS_SERVICE, DBUS_OBJECT_PATH)
             self._is_active = True
             return True
         except Exception:
