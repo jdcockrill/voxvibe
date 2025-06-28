@@ -1,25 +1,18 @@
 import logging
 import signal
-from typing import Literal, Optional
+from typing import Optional
 
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
 from .audio_recorder import AudioRecorder
-from .hotkey_manager import AbstractHotkeyManager, dbus_hotkey_manager, qt_hotkey_manager
+from .config import VoxVibeConfig, create_default_config, find_config_file
+from .hotkey_manager import AbstractHotkeyManager, create_hotkey_manager
 from .state_manager import StateManager
 from .system_tray import SystemTrayIcon
 from .transcriber import Transcriber
 from .window_manager import WindowManager
-
-
-# Helper to select implementation
-def get_hotkey_manager(impl: Literal["dbus", "qt"] = "dbus") -> AbstractHotkeyManager:
-    if impl == "qt":
-        return qt_hotkey_manager.QtHotkeyManager()
-    # Default to DBus
-    return dbus_hotkey_manager.DBusHotkeyManager()
-
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +22,10 @@ class VoxVibeService(QObject):
 
     shutdown_requested = pyqtSignal()
 
-    def __init__(self, app: QApplication):
+    def __init__(self, app: QApplication, config: VoxVibeConfig):
         super().__init__()
         self.app = app
+        self.config = config
         self.tray_icon: Optional[SystemTrayIcon] = None
         self.audio_recorder: Optional[AudioRecorder] = None
         self.transcriber: Optional[Transcriber] = None
@@ -56,13 +50,13 @@ class VoxVibeService(QObject):
             self.state_manager = StateManager()
 
             # Initialize transcriber
-            self.transcriber = Transcriber()
+            self.transcriber = Transcriber(self.config.transcription)
 
             # Initialize audio recorder
-            self.audio_recorder = AudioRecorder()
+            self.audio_recorder = AudioRecorder(self.config.audio)
 
             # Initialize window manager
-            self.window_manager = WindowManager()
+            self.window_manager = WindowManager(self.config.window_manager)
 
             # Log window manager diagnostics
             if self.window_manager.is_available():
@@ -76,11 +70,11 @@ class VoxVibeService(QObject):
                 logger.debug(f"Window manager diagnostics: {diagnostics}")
 
             # Initialize system tray
-            self.tray_icon = SystemTrayIcon(service_mode=True)
+            self.tray_icon = SystemTrayIcon(self.config.ui, service_mode=True)
             self._connect_tray_signals()
 
             # Initialize hotkey manager
-            self.hotkey_manager = get_hotkey_manager()
+            self.hotkey_manager = create_hotkey_manager(self.config.hotkeys)
             self._connect_hotkey_signals()
 
             # Connect state manager signals
@@ -266,10 +260,43 @@ class VoxVibeService(QObject):
             logger.error(f"Failed to paste transcription: {e}")
 
     def _show_settings(self):
-        """Show settings dialog (placeholder for future implementation)"""
-        self.tray_icon.showMessage(
-            "VoxVibe", "Settings dialog - Coming Soon!", SystemTrayIcon.MessageIcon.Information, 2000
-        )
+        """Open the `config.toml` file with the system's default editor/viewer."""
+        if not self.tray_icon:
+            return
+
+        try:
+            # Locate configuration file (create a default one if missing)
+            config_path = find_config_file()
+            if config_path is None:
+                config_path = create_default_config()
+
+            # Convert to QUrl and request the OS to open it
+            url = QUrl.fromLocalFile(str(config_path))
+            opened = QDesktopServices.openUrl(url)
+
+            if opened:
+                # Brief confirmation that something happened
+                self.tray_icon.showMessage(
+                    "VoxVibe",
+                    f"Opened settings file: {config_path}",
+                    SystemTrayIcon.MessageIcon.Information,
+                    1500,
+                )
+            else:
+                self.tray_icon.showMessage(
+                    "VoxVibe",
+                    "Failed to open settings file with default application.",
+                    SystemTrayIcon.MessageIcon.Warning,
+                    3000,
+                )
+        except Exception as e:
+            logger.error(f"Error opening settings file: {e}")
+            self.tray_icon.showMessage(
+                "VoxVibe",
+                "Error opening settings file. Check logs for details.",
+                SystemTrayIcon.MessageIcon.Warning,
+                3000,
+            )
 
     def _show_history(self):
         """Show transcription history (placeholder for future implementation)"""

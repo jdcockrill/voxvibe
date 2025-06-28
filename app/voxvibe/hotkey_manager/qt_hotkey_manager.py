@@ -2,8 +2,8 @@ import logging
 from typing import Optional
 
 from pynput import keyboard
-from PyQt6.QtCore import pyqtSignal
 
+from ..config import HotkeyConfig
 from .base import AbstractHotkeyManager
 
 logger = logging.getLogger(__name__)
@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 class QtHotkeyManager(AbstractHotkeyManager):
     """Handles global hotkey registration and detection for VoxVibe service using pynput."""
 
-    def __init__(self, hotkey: str = "<super>x"):
-        super().__init__()
+    def __init__(self, config: Optional[HotkeyConfig] = None, hotkey: str = "<super>x"):
+        super().__init__(config)
         self.hotkey = hotkey
         self.listener: Optional[keyboard.GlobalHotKeys] = None
         self._is_active = False

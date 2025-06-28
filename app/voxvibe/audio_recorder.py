@@ -6,20 +6,23 @@ from typing import Optional
 import numpy as np
 import sounddevice as sd
 
+from .config import AudioConfig
+
 logger = logging.getLogger(__name__)
 
 
 class AudioRecorder:
-    def __init__(self, sample_rate=16000, channels=1):
-        self.sample_rate = sample_rate
-        self.channels = channels
+    def __init__(self, config: Optional[AudioConfig] = None):
+        self.config = config or AudioConfig()
+        self.sample_rate = self.config.sample_rate
+        self.channels = self.config.channels
         self.is_recording = False
         self.audio_queue = queue.Queue()
         self.recording_thread = None
 
         # Set default device to None to use system default
-        sd.default.samplerate = sample_rate
-        sd.default.channels = channels
+        sd.default.samplerate = self.sample_rate
+        sd.default.channels = self.channels
         sd.default.dtype = np.float32
 
     def start_recording(self):
