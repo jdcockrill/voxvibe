@@ -5,22 +5,20 @@ from typing import Optional
 import numpy as np
 from faster_whisper import WhisperModel
 
+from .config import TranscriptionConfig
+
 logger = logging.getLogger(__name__)
 
 
 class Transcriber:
-    def __init__(self, model_size="base", device="auto", compute_type="auto"):
+    def __init__(self, config: Optional[TranscriptionConfig] = None):
         """
         Initialize the Whisper transcriber.
 
         Args:
-            model_size: Size of the Whisper model ("tiny", "base", "small", "medium", "large-v2", "large-v3")
-            device: Device to run on ("cpu", "cuda", "auto")
-            compute_type: Compute type ("int8", "int16", "float16", "float32", "auto")
+            config: TranscriptionConfig object with transcription settings
         """
-        self.model_size = model_size
-        self.device = device
-        self.compute_type = compute_type
+        self.config = config or TranscriptionConfig()
         self.model = None
 
         # Initialize model lazily to avoid long startup times
@@ -29,21 +27,21 @@ class Transcriber:
     def _load_model(self):
         """Load the Whisper model"""
         try:
-            logger.info(f"Loading Whisper model: {self.model_size}")
+            logger.info(f"Loading Whisper model: {self.config.model}")
 
             # Use CPU for better compatibility
-            if self.device == "auto":
+            if self.config.device == "auto":
                 device = "cpu"
             else:
-                device = self.device
+                device = self.config.device
 
-            if self.compute_type == "auto":
+            if self.config.compute_type == "auto":
                 compute_type = "int8" if device == "cpu" else "float16"
             else:
-                compute_type = self.compute_type
+                compute_type = self.config.compute_type
 
             self.model = WhisperModel(
-                self.model_size,
+                self.config.model,
                 device=device,
                 compute_type=compute_type,
                 download_root=os.path.expanduser("~/.cache/whisper"),
@@ -54,13 +52,13 @@ class Transcriber:
             logger.exception(f"Error loading Whisper model: {e}")
             raise
 
-    def transcribe(self, audio_data: np.ndarray, language="en") -> Optional[str]:
+    def transcribe(self, audio_data: np.ndarray, language: Optional[str] = None) -> Optional[str]:
         """
         Transcribe audio data to text.
 
         Args:
             audio_data: Numpy array of audio data (float32, mono, 16kHz)
-            language: Language code ("en", "es", "fr", etc.) or None for auto-detection
+            language: Language code ("en", "es", "fr", etc.) or None to use config default
 
         Returns:
             Transcribed text or None if transcription failed
@@ -88,10 +86,15 @@ class Transcriber:
                 logger.warning("Audio too short for transcription")
                 return None
 
+            # Use provided language or fall back to config
+            transcribe_language = language or self.config.language
+            if transcribe_language == "auto":
+                transcribe_language = None
+
             # Transcribe using faster-whisper
             segments, info = self.model.transcribe(
                 audio_data,
-                language=language if language != "auto" else None,
+                language=transcribe_language,
                 beam_size=5,
                 best_of=5,
                 temperature=0.0,

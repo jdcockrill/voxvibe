@@ -4,6 +4,7 @@ from typing import Optional
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtDBus import QDBusConnection
 
+from ..config import HotkeyConfig
 from .base import AbstractHotkeyManager
 
 logger = logging.getLogger(__name__)
@@ -16,8 +17,8 @@ DBUS_INTERFACE = "app.voxvibe.Service"
 class DBusHotkeyManager(AbstractHotkeyManager):
     """Hotkey manager that exposes a DBus method for triggering the hotkey from external apps/extensions."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, config: Optional[HotkeyConfig] = None):
+        super().__init__(config)
         self._is_active = False
         self._bus: Optional[QDBusConnection] = None
 

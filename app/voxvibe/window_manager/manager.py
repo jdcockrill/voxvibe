@@ -3,6 +3,7 @@
 import logging
 from typing import List, Optional
 
+from ..config import WindowManagerConfig
 from .base import WindowManagerStrategy
 from .dbus_strategy import DBusWindowManagerStrategy
 from .xdotool_strategy import XdotoolWindowManagerStrategy
@@ -13,19 +14,34 @@ logger = logging.getLogger(__name__)
 class WindowManager:
     """Window manager that tries different strategies in preference order."""
 
-    def __init__(self, strategies: Optional[List[WindowManagerStrategy]] = None):
-        """Initialize window manager with optional custom strategies.
+    def __init__(self, config: Optional[WindowManagerConfig] = None, strategies: Optional[List[WindowManagerStrategy]] = None):
+        """Initialize window manager with configuration and optional custom strategies.
 
         Args:
-            strategies: List of strategies to try in order. If None, uses default strategies.
+            config: WindowManagerConfig object with strategy preferences
+            strategies: List of strategies to try in order. If None, uses config or default strategies.
         """
+        self.config = config or WindowManagerConfig()
+        
         if strategies is None:
-            # Default strategies in preference order
-            strategies = [DBusWindowManagerStrategy(), XdotoolWindowManagerStrategy()]
+            strategies = self._create_strategies_from_config()
 
         self._strategies = strategies
         self._active_strategy: Optional[WindowManagerStrategy] = None
         self._initialize_strategy()
+
+    def _create_strategies_from_config(self) -> List[WindowManagerStrategy]:
+        """Create strategy list based on configuration."""
+        if self.config.strategy == "auto":
+            # Default strategies in preference order
+            return [DBusWindowManagerStrategy(), XdotoolWindowManagerStrategy()]
+        elif self.config.strategy == "dbus":
+            return [DBusWindowManagerStrategy()]
+        elif self.config.strategy == "xdotool":
+            return [XdotoolWindowManagerStrategy()]
+        else:
+            logger.warning(f"Unknown window manager strategy: {self.config.strategy}, using auto")
+            return [DBusWindowManagerStrategy(), XdotoolWindowManagerStrategy()]
 
     def _initialize_strategy(self) -> None:
         """Find and initialize the first available strategy."""

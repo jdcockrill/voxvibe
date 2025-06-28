@@ -5,9 +5,11 @@ import sys
 
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
+from .config import config, setup_logging
 from .single_instance import SingleInstance, SingleInstanceError
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - VoxVibe - %(name)s - %(levelname)s - %(message)s")
+# Basic logging setup for startup (will be reconfigured later)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - VoxVibe - %(levelname)s - %(message)s")
 
 
 def main():
@@ -33,7 +35,13 @@ def main():
                 logging.error("System tray is not available on this system")
                 return 1
 
-            service = VoxVibeService(app)
+            # Load configuration
+            app_config = config()
+            
+            # Setup logging based on configuration
+            setup_logging(app_config.logging)
+            
+            service = VoxVibeService(app, app_config)
             if not service.start():
                 logging.error("Failed to start VoxVibe service")
                 return 1

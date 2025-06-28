@@ -1,6 +1,10 @@
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
+from typing import Optional
+
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
+
+from .config import UIConfig
 
 
 class SystemTrayIcon(QSystemTrayIcon):
@@ -11,7 +15,8 @@ class SystemTrayIcon(QSystemTrayIcon):
     settings_requested = pyqtSignal()
     history_requested = pyqtSignal()
 
-    def __init__(self, parent=None, tooltip="VoxVibe Voice Dictation", service_mode=False):
+    def __init__(self, config: Optional[UIConfig] = None, parent=None, tooltip="VoxVibe Voice Dictation", service_mode=False):
+        self.config = config or UIConfig()
         self.service_mode = service_mode
         self.recording_state = "idle"  # idle, recording, processing
 
