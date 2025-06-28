@@ -40,7 +40,7 @@ VoxVibe works great with default settings, but you can customize its behavior th
 ### Accessing Settings
 
 The easiest way to modify settings is through the system tray:
-1. Right-click the VoxVibe microphone icon in your system tray
+1. Click the VoxVibe icon in your system tray
 2. Select **Settings** from the menu
 3. Your default text editor will open the configuration file
 
@@ -61,11 +61,13 @@ compute_type = "auto"       # Precision: "auto", "int8", "int16", "float16", "fl
 ```
 
 **Model Options** (from fastest/least accurate to slowest/most accurate):
-- `tiny`, `tiny.en` - Fastest, good for simple dictation
-- `base`, `base.en` - **Default** - Good balance of speed and accuracy
-- `small`, `small.en` - More accurate, slightly slower
-- `medium`, `medium.en` - High accuracy, moderate speed
-- `large-v1`, `large-v2`, `large-v3` - Highest accuracy, slower
+- `tiny`, `tiny.en` – Smallest model (~39 M parameters). Fastest (≈3× quicker than `base`) and lowest memory use; suitable for quick voice commands but noticeably less accurate on long or technical sentences.
+- `base`, `base.en` – **Default** size (~74 M parameters). Good all-rounder offering real-time dictation speed on most CPUs/GPUs with solid accuracy for everyday language.
+- `small`, `small.en`, `distil-small.en` – Medium-sized (~244 M / 122 M distilled). ~3-4 % WER improvement over `base` with ~1.5× slower inference; distilled variant halves memory and recovers much of the speed.
+- `medium`, `medium.en`, `distil-medium.en` – Large mid-tier (~769 M / 384 M distilled). Near large-model accuracy while ~2× slower than `small`; GPU recommended for comfortable real-time use.
+- `large-v1`, `large-v2`, `large-v3` – Full-size Whisper models (~1.5 B parameters). Highest accuracy but also the slowest and most resource-intensive.
+- `distil-large-v2`, `distil-large-v3` – Distilled versions (~50 % fewer parameters). Around 1.7-2× faster than the full large models with only a very small drop in accuracy (≈0.5–1 % WER).
+- `large-v3-turbo`, `turbo` – "Turbo" variant of `large-v3` that applies aggressive quantisation and decoder optimisations. Up to 4× faster than `large-v3` while roughly matching the accuracy of the distilled models.
 
 For most users, `base` provides the best balance. Use `small` or `medium` if you need higher accuracy and don't mind slower processing.
 
