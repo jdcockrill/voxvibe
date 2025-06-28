@@ -33,6 +33,85 @@ Built with [Claude Code](https://www.anthropic.com/claude-code) and [Windsurf](h
 
 That's it! Use `Super+X` to start voice dictation.
 
+## Configuration
+
+VoxVibe works great with default settings, but you can customize its behavior through a configuration file. The application will automatically create a default configuration file on first run.
+
+### Accessing Settings
+
+The easiest way to modify settings is through the system tray:
+1. Right-click the VoxVibe microphone icon in your system tray
+2. Select **Settings** from the menu
+3. Your default text editor will open the configuration file
+
+Alternatively, you can directly edit the configuration file located at:
+- `~/.config/voxvibe/config.toml`
+
+### Configuration Options
+
+The configuration file uses the [TOML](https://toml.io) format and is organized into sections:
+
+#### Transcription Settings
+```toml
+[transcription]
+model = "base"              # Whisper model size (see options below)
+language = "en"             # Language code or "auto" for auto-detection  
+device = "auto"             # Processing device: "auto", "cpu", or "cuda"
+compute_type = "auto"       # Precision: "auto", "int8", "int16", "float16", "float32"
+```
+
+**Model Options** (from fastest/least accurate to slowest/most accurate):
+- `tiny`, `tiny.en` - Fastest, good for simple dictation
+- `base`, `base.en` - **Default** - Good balance of speed and accuracy
+- `small`, `small.en` - More accurate, slightly slower
+- `medium`, `medium.en` - High accuracy, moderate speed
+- `large-v1`, `large-v2`, `large-v3` - Highest accuracy, slower
+
+For most users, `base` provides the best balance. Use `small` or `medium` if you need higher accuracy and don't mind slower processing.
+
+#### Audio Settings
+```toml
+[audio]
+sample_rate = 16000         # Audio sample rate (16kHz recommended)
+channels = 1                # Mono (1) or stereo (2) recording
+```
+
+#### User Interface
+```toml
+[ui]
+startup_delay = 2.0         # Delay before starting services
+show_notifications = true   # Show system notifications
+minimize_to_tray = true     # Minimize to system tray
+```
+
+#### Window Management
+```toml
+[window_manager]
+strategy = "auto"           # Window management: "auto", "dbus", "xdotool"
+paste_delay = 0.1           # Delay before pasting text (seconds)
+```
+
+#### Hotkey Management  
+```toml
+[hotkeys]
+strategy = "auto"           # Hotkey handling: "auto", "dbus", "qt"
+```
+
+#### Logging
+```toml
+[logging]
+level = "INFO"              # Log level: "DEBUG", "INFO", "WARNING", "ERROR"
+file = "~/.local/share/voxvibe/voxvibe.log"
+```
+
+### Configuration Tips
+
+- **Most settings work well as defaults** - only change what you need
+- **Model size** is the most common setting to adjust based on your hardware and accuracy needs
+- Changes take effect after restarting VoxVibe (quit and restart from system tray)
+- Invalid configuration values will fall back to defaults
+- The configuration file includes helpful comments explaining each option
+
 ## Architecture
 
 VoxVibe consists of two main components that communicate via DBus:
