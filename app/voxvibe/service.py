@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
 from .audio_recorder import AudioRecorder
 from .config import VoxVibeConfig, create_default_config, find_config_file
+from .history_storage import HistoryStorage
 from .hotkey_manager import AbstractHotkeyManager, create_hotkey_manager
 from .state_manager import StateManager
 from .system_tray import SystemTrayIcon
@@ -31,6 +32,7 @@ class VoxVibeService(QObject):
         self.transcriber: Optional[Transcriber] = None
         self.window_manager: Optional[WindowManager] = None
         self.hotkey_manager: Optional[AbstractHotkeyManager] = None
+        self.history_storage: Optional[HistoryStorage] = None
 
         # Setup signal handlers for graceful shutdown on SIGTERM and SIGINT (Ctrl+C)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -69,9 +71,20 @@ class VoxVibeService(QObject):
                 diagnostics = self.window_manager.get_diagnostics()
                 logger.debug(f"Window manager diagnostics: {diagnostics}")
 
+            # Initialize history storage
+            if self.config.history.enabled:
+                self.history_storage = HistoryStorage(
+                    self.config.history.storage_path,
+                    self.config.history.max_entries
+                )
+                logger.info("History storage initialized")
+
             # Initialize system tray
             self.tray_icon = SystemTrayIcon(self.config.ui, service_mode=True)
             self._connect_tray_signals()
+            
+            # Update tray with initial history
+            self._update_tray_history()
 
             # Initialize hotkey manager
             self.hotkey_manager = create_hotkey_manager(self.config.hotkeys)
@@ -99,6 +112,7 @@ class VoxVibeService(QObject):
         self.tray_icon.toggle_recording_requested.connect(self._toggle_recording)
         self.tray_icon.settings_requested.connect(self._show_settings)
         self.tray_icon.history_requested.connect(self._show_history)
+        self.tray_icon.history_copy_requested.connect(self._on_history_copy)
         self.tray_icon.quit_requested.connect(self.shutdown_requested.emit)
 
     def _connect_hotkey_signals(self):
@@ -129,7 +143,13 @@ class VoxVibeService(QObject):
 
     def _on_transcription_complete(self, text: str):
         """Handle transcription completion"""
-        self._paste_transcription(text)
+        success = self._paste_transcription(text)
+        
+        # Save to history if paste was successful and history is enabled
+        if success and self.history_storage:
+            if self.history_storage.save_transcription(text):
+                self._update_tray_history()
+                logger.info("Transcription saved to history")
 
     def _on_error(self, error_message: str):
         """Handle error states"""
@@ -243,21 +263,24 @@ class VoxVibeService(QObject):
             return
         self.state_manager.stop_recording()
 
-    def _paste_transcription(self, text: str):
+    def _paste_transcription(self, text: str) -> bool:
         """Paste transcription to the previously focused window"""
         if not self.window_manager:
             logger.warning("No window manager available")
-            return
+            return False
 
         try:
             success = self.window_manager.focus_and_paste(text)
             if success:
                 logger.info("Text pasted successfully")
+                return True
             else:
                 logger.warning("Failed to paste text.")
+                return False
 
         except Exception as e:
             logger.error(f"Failed to paste transcription: {e}")
+            return False
 
     def _show_settings(self):
         """Open the `config.toml` file with the system's default editor/viewer."""
@@ -303,6 +326,28 @@ class VoxVibeService(QObject):
         self.tray_icon.showMessage(
             "VoxVibe", "History dialog - Coming Soon!", SystemTrayIcon.MessageIcon.Information, 2000
         )
+
+    def _on_history_copy(self, text: str):
+        """Handle history item copy to clipboard"""
+        if self.tray_icon:
+            self.tray_icon.showMessage(
+                "VoxVibe", 
+                f"Copied to clipboard: {text[:30]}{'...' if len(text) > 30 else ''}", 
+                SystemTrayIcon.MessageIcon.Information, 
+                1500
+            )
+
+    def _update_tray_history(self):
+        """Update tray menu with latest history entries"""
+        if not self.tray_icon or not self.history_storage:
+            return
+        
+        try:
+            # Get recent history entries
+            history_entries = self.history_storage.get_recent(13)  # Get up to 13 for menu display
+            self.tray_icon.update_history(history_entries)
+        except Exception as e:
+            logger.error(f"Failed to update tray history: {e}")
 
     def _shutdown(self):
         """Gracefully shutdown the service"""

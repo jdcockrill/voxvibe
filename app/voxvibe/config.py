@@ -76,6 +76,21 @@ class WindowManagerConfig:
 
 
 @dataclass
+class HistoryConfig:
+    """
+    Configuration for transcription history.
+    
+    Attributes:
+        enabled (bool): Whether to store transcription history.
+        max_entries (int): Maximum number of history entries to keep.
+        storage_path (str): Path to the SQLite database file.
+    """
+    enabled: bool = True
+    max_entries: int = 20
+    storage_path: str = str(XDG_DATA_HOME / 'voxvibe' / 'history.db')
+
+
+@dataclass
 class LoggingConfig:
     """
     Configuration for logging.
@@ -85,7 +100,7 @@ class LoggingConfig:
         file (str): The path to the log file.
     """
     level: str = "INFO"
-    file: str = "~/.local/share/voxvibe/voxvibe.log"
+    file: str = str(XDG_DATA_HOME / 'voxvibe' / 'voxvibe.log')
 
 
 @dataclass
@@ -99,6 +114,7 @@ class VoxVibeConfig:
         hotkeys (HotkeyConfig): Configuration for hotkey management.
         ui (UIConfig): Configuration for user interface behavior.
         window_manager (WindowManagerConfig): Configuration for window management.
+        history (HistoryConfig): Configuration for transcription history.
         logging (LoggingConfig): Configuration for logging.
     """
     transcription: TranscriptionConfig = field(default_factory=TranscriptionConfig)
@@ -106,6 +122,7 @@ class VoxVibeConfig:
     hotkeys: HotkeyConfig = field(default_factory=HotkeyConfig)
     ui: UIConfig = field(default_factory=UIConfig)
     window_manager: WindowManagerConfig = field(default_factory=WindowManagerConfig)
+    history: HistoryConfig = field(default_factory=HistoryConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
 
 
@@ -153,6 +170,7 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
         hotkeys_data = config_data.get('hotkeys', {})
         ui_data = config_data.get('ui', {})
         window_manager_data = config_data.get('window_manager', {})
+        history_data = config_data.get('history', {})
         logging_data = config_data.get('logging', {})
         
         # Create config objects
@@ -162,6 +180,7 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
             hotkeys=HotkeyConfig(**hotkeys_data),
             ui=UIConfig(**ui_data),
             window_manager=WindowManagerConfig(**window_manager_data),
+            history=HistoryConfig(**history_data),
             logging=LoggingConfig(**logging_data),
         )
     
@@ -180,35 +199,68 @@ def create_default_config() -> Path:
 # This file follows the XDG Base Directory specification
 
 [transcription]
-backend = "faster-whisper"  # Options: "faster-whisper", "openai"
-model = "base"              # For faster-whisper: tiny, tiny.en, base, base.en,
-                            # small, small.en, distil-small.en, medium, medium.en, distil-medium.en,
-                            # large-v1, large-v2, large-v3, large, distil-large-v2, distil-large-v3,
-                            # large-v3-turbo, or turbo
-language = "en"             # Language code or "auto" for auto-detection
-device = "auto"             # Options: "auto", "cpu", "cuda"
-compute_type = "auto"       # Options: "auto", "int8", "int16", "float16", "float32"
+# Options: "faster-whisper", default: "faster-whisper"
+# backend = "faster-whisper"  
+
+# faster-whisper model options: tiny, tiny.en, base, base.en,
+# small, small.en, distil-small.en, medium, medium.en, distil-medium.en,
+# large-v1, large-v2, large-v3, large, distil-large-v2, distil-large-v3,
+# large-v3-turbo, or turbo
+# model = "base"            
+
+# Language code or "auto" for auto-detection
+# language = "en"
+
+# Device options: "auto", "cpu", "cuda"
+# device = "auto"
+
+# Compute type options: "auto", "int8", "int16", "float16", "float32"
+# compute_type = "auto"
 
 [audio]
-sample_rate = 16000         # Audio sample rate in Hz
-channels = 1                # Number of audio channels (1 = mono, 2 = stereo)
+
+# Audio sample rate in Hz
+sample_rate = 16000         
+
+# Number of audio channels (1 = mono, 2 = stereo)
+channels = 1                
 
 [hotkeys]
-strategy = "auto"           # Options: "dbus", "qt", "auto"
+# Options: "dbus", "qt", "auto"
+# strategy = "auto"           
 
 [ui]
-startup_delay = 2.0         # Seconds to wait before initializing graphical components
-show_notifications = true
-minimize_to_tray = true
+
+# Seconds to wait before initializing graphical components
+# startup_delay = 2.0         
+
+# Other UI options
+# show_notifications = true
+# minimize_to_tray = true
 
 [window_manager]
-strategy = "auto"           # Options: "auto", "dbus", "xdotool"
-paste_delay = 0.1           # Delay in seconds before pasting
+# Options: "auto", "dbus", "xdotool"
+# strategy = "auto"
+# Delay in seconds before pasting
+# paste_delay = 0.1           
+
+[history]
+# Whether to store transcription history
+# enabled = true              
+# Maximum number of history entries to keep 
+# max_entries = 20            
+# SQLite database path (respects XDG_DATA_HOME)
+# storage_path = "{XDG_DATA_HOME}/voxvibe/history.db"
 
 [logging]
-level = "INFO"              # Options: "DEBUG", "INFO", "WARNING", "ERROR"
-file = "~/.local/share/voxvibe/voxvibe.log"
+# Options: "DEBUG", "INFO", "WARNING", "ERROR"
+# level = "INFO"
+# Log file path (respects XDG_DATA_HOME)
+# file = "{XDG_DATA_HOME}/voxvibe/voxvibe.log"
 '''
+    
+    # Substitute XDG_DATA_HOME in the template
+    default_config = default_config.format(XDG_DATA_HOME=XDG_DATA_HOME)
     
     with open(config_file, 'w') as f:
         f.write(default_config)

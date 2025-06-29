@@ -1,8 +1,8 @@
-from typing import Optional
+from typing import List, Optional
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
+from PyQt6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from .config import UIConfig
 
@@ -14,11 +14,13 @@ class SystemTrayIcon(QSystemTrayIcon):
     toggle_recording_requested = pyqtSignal()
     settings_requested = pyqtSignal()
     history_requested = pyqtSignal()
+    history_copy_requested = pyqtSignal(str)  # Signal with text to copy
 
     def __init__(self, config: Optional[UIConfig] = None, parent=None, tooltip="VoxVibe Voice Dictation", service_mode=False):
         self.config = config or UIConfig()
         self.service_mode = service_mode
         self.recording_state = "idle"  # idle, recording, processing
+        self.history_entries = []  # Store history entries for menu
 
         icon = self._create_icon()
         super().__init__(icon, parent)
@@ -44,15 +46,67 @@ class SystemTrayIcon(QSystemTrayIcon):
             self.toggle_action.triggered.connect(self._on_toggle_recording_requested)
             self._menu.addSeparator()
 
+            # Add history section
+            self._add_history_section()
+            
             settings_action = self._menu.addAction("Settings")
-            history_action = self._menu.addAction("History")
             self._menu.addSeparator()
 
             settings_action.triggered.connect(self.settings_requested.emit)
-            history_action.triggered.connect(self.history_requested.emit)
 
         quit_action = self._menu.addAction("Quit")
         quit_action.triggered.connect(self.quit_requested.emit)
+
+    def _add_history_section(self):
+        """Add history items to the menu"""
+        if not self.history_entries:
+            # Show placeholder when no history
+            no_history_action = self._menu.addAction("No transcription history")
+            no_history_action.setEnabled(False)
+            self._menu.addSeparator()
+            return
+
+        # Add last 3 items directly to menu
+        recent_entries = self.history_entries[:3]
+        for entry in recent_entries:
+            display_text = self._truncate_text(entry.text, 40)
+            action = self._menu.addAction(f"📋 {display_text}")
+            action.triggered.connect(lambda checked, text=entry.text: self._copy_to_clipboard(text))
+
+        # Add "More >" submenu if there are more than 3 entries
+        if len(self.history_entries) > 3:
+            more_entries = self.history_entries[3:13]  # Next 10 items
+            if more_entries:
+                more_menu = QMenu("More >", self._menu)
+                for entry in more_entries:
+                    display_text = self._truncate_text(entry.text, 50)
+                    action = more_menu.addAction(f"📋 {display_text}")
+                    action.triggered.connect(lambda checked, text=entry.text: self._copy_to_clipboard(text))
+                self._menu.addMenu(more_menu)
+
+        self._menu.addSeparator()
+
+    def _truncate_text(self, text: str, max_length: int) -> str:
+        """Truncate text for display in menu items"""
+        if len(text) <= max_length:
+            return text
+        return text[:max_length-3] + "..."
+
+    def _copy_to_clipboard(self, text: str):
+        """Copy text to system clipboard"""
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text)
+        self.history_copy_requested.emit(text)
+
+    def update_history(self, history_entries: List):
+        """Update the history entries and rebuild the menu"""
+        self.history_entries = history_entries
+        self._rebuild_menu()
+
+    def _rebuild_menu(self):
+        """Rebuild the entire menu with updated history"""
+        self._menu.clear()
+        self._add_actions()
 
     def _on_toggle_recording_requested(self):
         if self.toggle_action.text() == "Start Recording":
