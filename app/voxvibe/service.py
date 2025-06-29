@@ -34,6 +34,8 @@ class VoxVibeService(QObject):
         self.hotkey_manager: Optional[AbstractHotkeyManager] = None
         self.history_storage: Optional[HistoryStorage] = None
 
+
+        
         # Setup signal handlers for graceful shutdown on SIGTERM and SIGINT (Ctrl+C)
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)

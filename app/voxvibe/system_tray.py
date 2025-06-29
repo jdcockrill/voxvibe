@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List, Optional
 
 from PyQt6.QtCore import pyqtSignal
@@ -34,9 +35,28 @@ class SystemTrayIcon(QSystemTrayIcon):
         if state is None:
             state = self.recording_state
 
-        # Try to get system theme icon first
-        icon_name = "audio-input-microphone" if state == "idle" else "microphone-sensitivity-high"
-        icon = QIcon.fromTheme(icon_name)
+        # Get the icons directory path
+        icons_dir = Path(__file__).parent / "icons"
+        
+        # Map states to icon files
+        icon_files = {
+            "idle": "idle.png",
+            "recording": "recording.png", 
+            "processing": "processing.png"
+        }
+        
+        # Get the appropriate icon file
+        icon_file = icon_files.get(state, "idle.png")
+        icon_path = icons_dir / icon_file
+        
+        # Load custom icon if it exists, otherwise fallback to theme icon
+        if icon_path.exists():
+            icon = QIcon(str(icon_path))
+        else:
+            # Fallback to system theme icons
+            icon_name = "audio-input-microphone" if state == "idle" else "microphone-sensitivity-high"
+            icon = QIcon.fromTheme(icon_name)
+        
         return icon
 
     def _add_actions(self):
