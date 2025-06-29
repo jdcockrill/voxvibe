@@ -77,7 +77,7 @@ class SystemTrayIcon(QSystemTrayIcon):
         if len(self.history_entries) > 3:
             more_entries = self.history_entries[3:13]  # Next 10 items
             if more_entries:
-                more_menu = QMenu("More >", self._menu)
+                more_menu = QMenu("More", self._menu)
                 for entry in more_entries:
                     display_text = self._truncate_text(entry.text, 50)
                     action = more_menu.addAction(f"📋 {display_text}")
