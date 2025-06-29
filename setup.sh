@@ -7,6 +7,12 @@ readonly EXTENSION_UUID="voxvibe@voxvibe.app"
 readonly DEPENDENCIES=("pipx" "systemctl" "gnome-extensions" "glib-compile-schemas")
 readonly GUM_REQUIRED="gum"
 
+# Validate extension UUID format for security
+if [[ ! "$EXTENSION_UUID" =~ ^[a-zA-Z0-9_-]+@[a-zA-Z0-9_.-]+\.[a-zA-Z]{2,}$ ]]; then
+    echo "Error: Invalid extension UUID format: $EXTENSION_UUID"
+    exit 1
+fi
+
 # Color constants (from cursor wizard)
 readonly CLR_SCS="#16FF15"    # Success - bright green
 readonly CLR_INF="#0095FF"    # Info - blue
@@ -27,6 +33,13 @@ if [ ! -f "VERSION" ]; then
     exit 1
 fi
 VERSION=$(head -n 1 VERSION | sed 's/VoxVibe //')
+
+# Validate version format (semantic versioning)
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Error: Invalid version format in VERSION file. Expected format: X.Y.Z"
+    echo "Found: '$VERSION'"
+    exit 1
+fi
 
 # Detect if gum is available
 command -v gum >/dev/null 2>&1 && GUM_AVAILABLE=true
@@ -82,6 +95,23 @@ spinner() {
         done
         printf "\r\033[K"
     fi
+}
+
+# Security: Validate file paths to prevent path traversal attacks
+validate_path() {
+    local path="$1"
+    local expected_prefix="$2"
+    
+    # Resolve path to absolute path
+    local resolved_path
+    resolved_path=$(readlink -f "$path" 2>/dev/null || echo "$path")
+    
+    # Check if path starts with expected prefix
+    if [[ "$resolved_path" != "$expected_prefix"* ]]; then
+        return 1
+    fi
+    
+    return 0
 }
 
 show_banner() {
@@ -158,6 +188,12 @@ check_existing_installation() {
 
 install_python_app() {
     logg prompt "Installing VoxVibe Python application..."
+    
+    # Validate wheel file exists
+    if ! ls app/*.whl >/dev/null 2>&1; then
+        logg error "No wheel file found in app/ directory"
+        return 1
+    fi
     
     if ! spinner "Installing with pipx" "pipx install app/*.whl"; then
         logg error "Failed to install VoxVibe Python package"
@@ -240,21 +276,39 @@ EOF
 install_gnome_extension() {
     logg prompt "Installing GNOME Shell extension..."
     
+    # Validate source directory exists
+    if [ ! -d "extension" ]; then
+        logg error "Extension source directory not found"
+        return 1
+    fi
+    
     # Stop and disable extension first if it exists
     gnome-extensions disable "$EXTENSION_UUID" 2>/dev/null || true
     
     # Install extension files
-    mkdir -p "$HOME/.local/share/gnome-shell/extensions/$EXTENSION_UUID"
-    if spinner "Copying extension files" "cp -r extension/* '$HOME/.local/share/gnome-shell/extensions/$EXTENSION_UUID/'"; then
+    local extension_dir="$HOME/.local/share/gnome-shell/extensions/$EXTENSION_UUID"
+    
+    # Validate target directory path for security
+    if ! validate_path "$extension_dir" "$HOME/.local/share/gnome-shell/extensions/"; then
+        logg error "Invalid extension directory path detected"
+        return 1
+    fi
+    
+    mkdir -p "$extension_dir"
+    if spinner "Copying extension files" "cp -r extension/* \"$extension_dir/\""; then
         logg success "Extension files installed"
+    else
+        logg error "Failed to copy extension files"
+        return 1
     fi
     
     # Install GNOME schema if it exists
     if [ -f "extension/org.gnome.shell.extensions.voxvibe.gschema.xml" ]; then
         logg info "Installing GNOME schema..."
-        mkdir -p "$HOME/.local/share/glib-2.0/schemas"
-        cp extension/org.gnome.shell.extensions.voxvibe.gschema.xml "$HOME/.local/share/glib-2.0/schemas/"
-        if spinner "Compiling GLib schemas" "glib-compile-schemas '$HOME/.local/share/glib-2.0/schemas/'"; then
+        local schema_dir="$HOME/.local/share/glib-2.0/schemas"
+        mkdir -p "$schema_dir"
+        cp extension/org.gnome.shell.extensions.voxvibe.gschema.xml "$schema_dir/"
+        if spinner "Compiling GLib schemas" "glib-compile-schemas \"$schema_dir\""; then
             logg success "GNOME schema compiled successfully"
         else
             logg warn "Could not compile schemas - extension may not work properly"
@@ -316,14 +370,23 @@ remove_existing_installation() {
     
     # Disable and remove extension
     gnome-extensions disable "$EXTENSION_UUID" 2>/dev/null || true
-    if spinner "Removing extension files" "rm -rf '$HOME/.local/share/gnome-shell/extensions/$EXTENSION_UUID'"; then
-        logg success "Previous extension files removed"
+    local extension_path="$HOME/.local/share/gnome-shell/extensions/$EXTENSION_UUID"
+    # Validate path before removal for security
+    if [[ "$extension_path" =~ ^/home/.*/\.local/share/gnome-shell/extensions/voxvibe@voxvibe\.app$ ]]; then
+        if spinner "Removing extension files" "rm -rf \"$extension_path\""; then
+            logg success "Previous extension files removed"
+        fi
+    else
+        logg error "Invalid extension path detected, skipping removal for security"
+        return 1
     fi
     
     # Remove schema if it exists
     rm -f "$HOME/.local/share/glib-2.0/schemas/org.gnome.shell.extensions.voxvibe.gschema.xml"
     if [ -d "$HOME/.local/share/glib-2.0/schemas/" ]; then
-        glib-compile-schemas "$HOME/.local/share/glib-2.0/schemas/" 2>/dev/null || true
+        if ! glib-compile-schemas "$HOME/.local/share/glib-2.0/schemas/" 2>/dev/null; then
+            logg warn "Could not recompile GLib schemas after removal"
+        fi
     fi
     
     logg success "Existing installation components updated"
