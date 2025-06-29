@@ -1,6 +1,5 @@
 <div align="left" style="margin-bottom: 20px;">
-  <img src="docs/voxvibe-logo.svg" alt="VoxVibe Logo" width="120" height="120" style="vertical-align: middle; margin-right: 20px;">
-  <span style="font-size: 4em; font-weight: bold; background: linear-gradient(135deg, #FF1493 0%, #DA1884 25%, #B400FF 50%, #8A2BE2 75%, #6B30DA 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); vertical-align: middle;">VoxVibe</span>
+  <img src="docs/voxvibe-logo-with-text.svg" alt="VoxVibe Logo" width="730" height="200" style="vertical-align: middle; margin-right: 20px;">
 </div>
 
 **Voice dictation that just works.** Press `Super+X` anywhere in GNOME, speak your thoughts, and watch your words appear exactly where you need them.
