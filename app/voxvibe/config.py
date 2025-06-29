@@ -21,13 +21,19 @@ CONFIG_FILENAME = 'config.toml'
 
 
 @dataclass
-class TranscriptionConfig:
-    """Configuration for transcription backend and models."""
-    backend: Literal["faster-whisper"] = "faster-whisper"
+class FasterWhisperConfig:
+    """Configuration for faster-whisper backend."""
     model: str = "base"
     language: str = "en"
     device: Literal["auto", "cpu", "cuda"] = "auto"
     compute_type: Literal["auto", "int8", "int16", "float16", "float32"] = "auto"
+
+
+@dataclass
+class TranscriptionConfig:
+    """Configuration for transcription backend and models."""
+    backend: Literal["faster-whisper"] = "faster-whisper"
+    faster_whisper: FasterWhisperConfig = field(default_factory=FasterWhisperConfig)
 
 
 @dataclass
@@ -173,9 +179,21 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
         history_data = config_data.get('history', {})
         logging_data = config_data.get('logging', {})
         
+        # Handle nested faster-whisper config with backward compatibility
+        faster_whisper_data = transcription_data.pop('faster_whisper', {})
+        
+        # Handle backward compatibility: move old direct fields to faster_whisper section
+        old_fields = ['model', 'language', 'device', 'compute_type']
+        for field in old_fields:
+            if field in transcription_data:
+                faster_whisper_data[field] = transcription_data.pop(field)
+        
+        transcription_config = TranscriptionConfig(**transcription_data)
+        transcription_config.faster_whisper = FasterWhisperConfig(**faster_whisper_data)
+        
         # Create config objects
         return VoxVibeConfig(
-            transcription=TranscriptionConfig(**transcription_data),
+            transcription=transcription_config,
             audio=AudioConfig(**audio_data),
             hotkeys=HotkeyConfig(**hotkeys_data),
             ui=UIConfig(**ui_data),
@@ -196,12 +214,12 @@ def create_default_config() -> Path:
     config_file = config_dir / CONFIG_FILENAME
     
     default_config = '''# VoxVibe Configuration File
-# This file follows the XDG Base Directory specification
 
 [transcription]
 # Options: "faster-whisper", default: "faster-whisper"
 # backend = "faster-whisper"  
 
+[transcription.faster_whisper]
 # faster-whisper model options: tiny, tiny.en, base, base.en,
 # small, small.en, distil-small.en, medium, medium.en, distil-medium.en,
 # large-v1, large-v2, large-v3, large, distil-large-v2, distil-large-v3,
