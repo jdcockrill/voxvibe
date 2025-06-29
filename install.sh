@@ -75,15 +75,15 @@ fi
 echo "Found extracted directory: $EXTRACTED_DIR"
 
 # Navigate into the extracted directory and run the installer
-INSTALL_SCRIPT="$EXTRACTED_DIR/install.sh"
-if [ ! -f "$INSTALL_SCRIPT" ]; then
-  echo "Error: install.sh not found in the release package."
+SETUP_SCRIPT="$EXTRACTED_DIR/setup.sh"
+if [ ! -f "$SETUP_SCRIPT" ]; then
+  echo "Error: setup.sh not found in the release package."
   exit 1
 fi
 
 echo "Running the installer from the release package..."
 cd "$EXTRACTED_DIR"
-bash ./install.sh
+bash ./setup.sh
 
 echo "Installation complete! VoxVibe should now be installed."
 echo "Thank you for using VoxVibe!"
