@@ -6,6 +6,7 @@ import sys
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
 from .config import config, setup_logging
+from .signal_wakeup_handler import SignalWakeupHandler
 from .single_instance import SingleInstance, SingleInstanceError
 
 # Basic logging setup for startup (will be reconfigured later)
@@ -27,6 +28,9 @@ def main():
                 return 0
 
             app = QApplication(sys.argv)
+            # Initialize wakeup handler to bridge system signals into Qt loop
+            _signal_wakeup = SignalWakeupHandler(app)
+
             app.setQuitOnLastWindowClosed(False)  # Don't quit when windows are closed
             app.setApplicationName("VoxVibe Service")
 

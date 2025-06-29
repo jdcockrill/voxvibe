@@ -124,9 +124,9 @@ package: dist
 	@echo "Git Commit: $(GIT_COMMIT)" >> $(BUILD_DIR)/voxvibe-$(VERSION)/VERSION
 	@echo "Build Date: $(shell date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $(BUILD_DIR)/voxvibe-$(VERSION)/VERSION
 	
-	# Create installation script
-	@sed -e 's/{{VERSION}}/$(VERSION)/g' -e 's/{{EXTENSION_UUID}}/$(EXTENSION_UUID)/g' install.sh.template > $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
-	@chmod +x $(BUILD_DIR)/voxvibe-$(VERSION)/install.sh
+	# Copy setup script
+	@cp setup.sh $(BUILD_DIR)/voxvibe-$(VERSION)/setup.sh
+	@chmod +x $(BUILD_DIR)/voxvibe-$(VERSION)/setup.sh
 	
 	# Create tarball
 	@cd $(BUILD_DIR) && tar -czf voxvibe-$(VERSION).tar.gz voxvibe-$(VERSION)/
