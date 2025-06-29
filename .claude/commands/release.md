@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Edit, Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git push:*), Bash(gh issue create:*), Bash(gh pr create:*), Bash(uv version --short)
+allowed-tools: Read, Edit, Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git checkout:*), Bash(git push:*), Bash(gh issue create:*), Bash(gh pr create:*), Bash(uv version --short)
 description: Execute the release process for VoxVibe
 ---
 
@@ -20,7 +20,7 @@ The process you must follow is:
 2. Create a github issue for updating the version number
 3. Create a branch in the form of `release/vX.Y.Z`
 4. Update version in app/pyproject.toml.
-5. Increment the version number in extension/metadata.json.
+5. Read the version number in extension/metadata.json and increment by 1.
 6. Commit changes to the branch and push to GitHub.
 7. Create a PR for the release branch.
 
