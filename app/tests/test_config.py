@@ -8,6 +8,7 @@ from voxvibe.config import (
     CONFIG_FILENAME,
     AudioConfig,
     ConfigurationError,
+    FasterWhisperConfig,
     HotkeyConfig,
     LoggingConfig,
     TranscriptionConfig,
@@ -15,7 +16,6 @@ from voxvibe.config import (
     VoxVibeConfig,
     WindowManagerConfig,
     _parse_config,
-    config,
     create_default_config,
     find_config_file,
     get_config,
@@ -80,7 +80,7 @@ startup_delay = 3.0
 
     config: VoxVibeConfig = load_config()
 
-    assert config.transcription.model == "small"
+    assert config.transcription.faster_whisper.model == "small"
     assert config.transcription.backend == "faster-whisper"  # Default
     assert config.ui.startup_delay == 3.0
     assert config.hotkeys == HotkeyConfig()  # Default
@@ -113,16 +113,18 @@ def test_create_default_config_matches_dataclasses(tmp_path: Path, mocker: "Mock
     default_config: VoxVibeConfig = VoxVibeConfig()
 
     # Compare the generated config with the dataclass defaults
-    assert generated_config_data["transcription"]["backend"] == default_config.transcription.backend
-    assert generated_config_data["transcription"]["model"] == default_config.transcription.model
-    assert generated_config_data["hotkeys"]["strategy"] == default_config.hotkeys.strategy
-    assert generated_config_data["ui"]["startup_delay"] == default_config.ui.startup_delay
-    assert generated_config_data["ui"]["show_notifications"] == default_config.ui.show_notifications
-    assert generated_config_data["ui"]["minimize_to_tray"] == default_config.ui.minimize_to_tray
-    assert generated_config_data["window_manager"]["strategy"] == default_config.window_manager.strategy
-    assert generated_config_data["window_manager"]["paste_delay"] == default_config.window_manager.paste_delay
-    assert generated_config_data["logging"]["level"] == default_config.logging.level
-    assert generated_config_data["logging"]["file"] == default_config.logging.file
+    # Only check values that are actually uncommented in the default config
+    assert generated_config_data["audio"]["sample_rate"] == default_config.audio.sample_rate
+    assert generated_config_data["audio"]["channels"] == default_config.audio.channels
+    
+    # Verify structure exists (commented values won't be in the parsed TOML)
+    assert "transcription" in generated_config_data
+    assert "faster_whisper" in generated_config_data["transcription"]
+    assert "hotkeys" in generated_config_data
+    assert "ui" in generated_config_data
+    assert "window_manager" in generated_config_data
+    assert "logging" in generated_config_data
+    assert "history" in generated_config_data
 
 
 def test_full_config_loading(mocker: "MockerFixture") -> None:
@@ -156,7 +158,11 @@ file = "/tmp/voxvibe.log"
 
     config = load_config()
 
-    assert config.transcription == TranscriptionConfig(backend="faster-whisper", model="large-v3")
+    expected_transcription = TranscriptionConfig(
+        backend="faster-whisper",
+        faster_whisper=FasterWhisperConfig(model="large-v3")
+    )
+    assert config.transcription == expected_transcription
     assert config.hotkeys == HotkeyConfig(strategy="dbus")
     assert config.ui == UIConfig(startup_delay=1.0, show_notifications=False, minimize_to_tray=False)
     assert config.window_manager == WindowManagerConfig(strategy="xdotool", paste_delay=0.5)
@@ -178,7 +184,7 @@ show_notifications = false
     config = load_config()
 
     # Check specified values
-    assert config.transcription.model == "small"
+    assert config.transcription.faster_whisper.model == "small"
     assert config.ui.show_notifications is False
 
     # Check that other values are default
@@ -242,7 +248,7 @@ model = "small"
     config = load_config()
     assert config.audio.sample_rate == 44100
     assert config.audio.channels == 2
-    assert config.transcription.model == "small"
+    assert config.transcription.faster_whisper.model == "small"
 
 
 def test_get_config_success(mocker: "MockerFixture") -> None:
@@ -270,28 +276,6 @@ def test_get_config_failure_creates_default(mocker: "MockerFixture") -> None:
     assert result == VoxVibeConfig()
     mock_create_default.assert_called_once()
     mock_logger.warning.assert_called_once()
-
-
-def test_config_global_instance(mocker: "MockerFixture") -> None:
-    """Test global config instance caching."""
-    mock_get_config = mocker.patch("voxvibe.config.get_config")
-    mock_config = VoxVibeConfig()
-    mock_get_config.return_value = mock_config
-    
-    # Reset global instance
-    import voxvibe.config
-    voxvibe.config._config_instance = None
-    
-    # First call should load config
-    result1 = config()
-    assert result1 == mock_config
-    mock_get_config.assert_called_once()
-    
-    # Second call should use cached instance
-    result2 = config()
-    assert result2 == mock_config
-    # get_config should still only be called once
-    mock_get_config.assert_called_once()
 
 
 def test_reload_config(mocker: "MockerFixture") -> None:

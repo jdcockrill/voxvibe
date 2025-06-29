@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 
-from voxvibe.config import TranscriptionConfig
+from voxvibe.config import FasterWhisperConfig, TranscriptionConfig
 from voxvibe.transcriber import Transcriber
 
 if TYPE_CHECKING:
@@ -29,19 +29,21 @@ def test_transcriber_init_default_config(mock_whisper_model):
     """Test transcriber initialization with default config."""
     transcriber = Transcriber()
     assert transcriber.config.backend == "faster-whisper"
-    assert transcriber.config.model == "base"
-    assert transcriber.config.language == "en"
-    assert transcriber.config.device == "auto"
-    assert transcriber.config.compute_type == "auto"
+    assert transcriber.config.faster_whisper.model == "base"
+    assert transcriber.config.faster_whisper.language == "en"
+    assert transcriber.config.faster_whisper.device == "auto"
+    assert transcriber.config.faster_whisper.compute_type == "auto"
 
 
 def test_transcriber_init_custom_config(mock_whisper_model):
     """Test transcriber initialization with custom config."""
-    config = TranscriptionConfig(model="small", language="es", device="cpu")
+    config = TranscriptionConfig(
+        faster_whisper=FasterWhisperConfig(model="small", language="es", device="cpu")
+    )
     transcriber = Transcriber(config)
-    assert transcriber.config.model == "small"
-    assert transcriber.config.language == "es" 
-    assert transcriber.config.device == "cpu"
+    assert transcriber.config.faster_whisper.model == "small"
+    assert transcriber.config.faster_whisper.language == "es" 
+    assert transcriber.config.faster_whisper.device == "cpu"
 
 
 def test_load_model_auto_device_cpu(mocker: "MockerFixture"):
@@ -49,7 +51,9 @@ def test_load_model_auto_device_cpu(mocker: "MockerFixture"):
     mock_model = mocker.patch('voxvibe.transcriber.WhisperModel')
     mocker.patch('os.path.expanduser', return_value="/home/user/.cache/whisper")
     
-    config = TranscriptionConfig(device="auto", compute_type="auto")
+    config = TranscriptionConfig(
+        faster_whisper=FasterWhisperConfig(device="auto", compute_type="auto")
+    )
     Transcriber(config)
     
     mock_model.assert_called_once_with(
@@ -65,7 +69,9 @@ def test_load_model_explicit_device(mocker: "MockerFixture"):
     mock_model = mocker.patch('voxvibe.transcriber.WhisperModel')
     mocker.patch('os.path.expanduser', return_value="/home/user/.cache/whisper")
     
-    config = TranscriptionConfig(device="cuda", compute_type="float16")
+    config = TranscriptionConfig(
+        faster_whisper=FasterWhisperConfig(device="cuda", compute_type="float16")
+    )
     Transcriber(config)
     
     mock_model.assert_called_once_with(
@@ -252,7 +258,7 @@ def test_transcriber_config_defaults():
     """Test that TranscriptionConfig has expected defaults."""
     config = TranscriptionConfig()
     assert config.backend == "faster-whisper"
-    assert config.model == "base"
-    assert config.language == "en"
-    assert config.device == "auto"
-    assert config.compute_type == "auto"
+    assert config.faster_whisper.model == "base"
+    assert config.faster_whisper.language == "en"
+    assert config.faster_whisper.device == "auto"
+    assert config.faster_whisper.compute_type == "auto"

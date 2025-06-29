@@ -27,21 +27,21 @@ class Transcriber:
     def _load_model(self):
         """Load the Whisper model"""
         try:
-            logger.info(f"Loading Whisper model: {self.config.model}")
+            logger.info(f"Loading Whisper model: {self.config.faster_whisper.model}")
 
             # Use CPU for better compatibility
-            if self.config.device == "auto":
+            if self.config.faster_whisper.device == "auto":
                 device = "cpu"
             else:
-                device = self.config.device
+                device = self.config.faster_whisper.device
 
-            if self.config.compute_type == "auto":
+            if self.config.faster_whisper.compute_type == "auto":
                 compute_type = "int8" if device == "cpu" else "float16"
             else:
-                compute_type = self.config.compute_type
+                compute_type = self.config.faster_whisper.compute_type
 
             self.model = WhisperModel(
-                self.config.model,
+                self.config.faster_whisper.model,
                 device=device,
                 compute_type=compute_type,
                 download_root=os.path.expanduser("~/.cache/whisper"),
@@ -87,7 +87,7 @@ class Transcriber:
                 return None
 
             # Use provided language or fall back to config
-            transcribe_language = language or self.config.language
+            transcribe_language = language or self.config.faster_whisper.language
             if transcribe_language == "auto":
                 transcribe_language = None
 

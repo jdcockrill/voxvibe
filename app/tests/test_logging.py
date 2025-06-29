@@ -3,7 +3,7 @@ import logging.handlers
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from voxvibe.config import LoggingConfig, setup_logging
+from voxvibe.config import XDG_DATA_HOME, LoggingConfig, setup_logging
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -186,7 +186,7 @@ def test_logging_config_defaults():
     """Test LoggingConfig default values."""
     config = LoggingConfig()
     assert config.level == "INFO"
-    assert config.file == "~/.local/share/voxvibe/voxvibe.log"
+    assert config.file == str(XDG_DATA_HOME / 'voxvibe' / 'voxvibe.log')
 
 
 def test_logging_config_custom_values():
