@@ -6,12 +6,8 @@ set -euo pipefail
 readonly EXTENSION_UUID="voxvibe@voxvibe.app"
 readonly DEPENDENCIES=("pipx" "systemctl" "gnome-extensions" "glib-compile-schemas")
 readonly GUM_REQUIRED="gum"
-
-# Validate extension UUID format for security
-if [[ ! "$EXTENSION_UUID" =~ ^[a-zA-Z0-9_-]+@[a-zA-Z0-9_.-]+\.[a-zA-Z]{2,}$ ]]; then
-    echo "Error: Invalid extension UUID format: $EXTENSION_UUID"
-    exit 1
-fi
+readonly DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+readonly EXTENSION_DIR="${DATA_HOME}/gnome-shell/extensions/$EXTENSION_UUID"
 
 # Color constants (from cursor wizard)
 readonly CLR_SCS="#16FF15"    # Success - bright green
@@ -97,23 +93,6 @@ spinner() {
     fi
 }
 
-# Security: Validate file paths to prevent path traversal attacks
-validate_path() {
-    local path="$1"
-    local expected_prefix="$2"
-    
-    # Resolve path to absolute path
-    local resolved_path
-    resolved_path=$(readlink -f "$path" 2>/dev/null || echo "$path")
-    
-    # Check if path starts with expected prefix
-    if [[ "$resolved_path" != "$expected_prefix"* ]]; then
-        return 1
-    fi
-    
-    return 0
-}
-
 show_banner() {
     clear
     if [ "$GUM_AVAILABLE" = true ]; then
@@ -174,7 +153,7 @@ check_existing_installation() {
     fi
     
     # Check if extension is installed
-    if [ -d "$HOME/.local/share/gnome-shell/extensions/$EXTENSION_UUID" ]; then
+    if [ -d "$EXTENSION_DIR" ]; then
         extension_installed=true
     fi
     
@@ -286,16 +265,8 @@ install_gnome_extension() {
     gnome-extensions disable "$EXTENSION_UUID" 2>/dev/null || true
     
     # Install extension files
-    local extension_dir="$HOME/.local/share/gnome-shell/extensions/$EXTENSION_UUID"
-    
-    # Validate target directory path for security
-    if ! validate_path "$extension_dir" "$HOME/.local/share/gnome-shell/extensions/"; then
-        logg error "Invalid extension directory path detected"
-        return 1
-    fi
-    
-    mkdir -p "$extension_dir"
-    if spinner "Copying extension files" "cp -r extension/* \"$extension_dir/\""; then
+    mkdir -p "$EXTENSION_DIR"
+    if spinner "Copying extension files" "cp -r extension/* \"$EXTENSION_DIR/\""; then
         logg success "Extension files installed"
     else
         logg error "Failed to copy extension files"
@@ -305,7 +276,7 @@ install_gnome_extension() {
     # Install GNOME schema if it exists
     if [ -f "extension/org.gnome.shell.extensions.voxvibe.gschema.xml" ]; then
         logg info "Installing GNOME schema..."
-        local schema_dir="$HOME/.local/share/glib-2.0/schemas"
+        local schema_dir="$DATA_HOME/glib-2.0/schemas"
         mkdir -p "$schema_dir"
         cp extension/org.gnome.shell.extensions.voxvibe.gschema.xml "$schema_dir/"
         if spinner "Compiling GLib schemas" "glib-compile-schemas \"$schema_dir\""; then
@@ -370,10 +341,9 @@ remove_existing_installation() {
     
     # Disable and remove extension
     gnome-extensions disable "$EXTENSION_UUID" 2>/dev/null || true
-    local extension_path="$HOME/.local/share/gnome-shell/extensions/$EXTENSION_UUID"
-    # Validate path before removal for security
-    if [[ "$extension_path" =~ ^/home/.*/\.local/share/gnome-shell/extensions/voxvibe@voxvibe\.app$ ]]; then
-        if spinner "Removing extension files" "rm -rf \"$extension_path\""; then
+    # Validate path before removal for security - just check there's at least a voxvibe@voxvibe.app directory in the path
+    if [[ "$EXTENSION_DIR" =~ .*/voxvibe@voxvibe\.app$ ]]; then
+        if spinner "Removing extension files" "rm -rf \"$EXTENSION_DIR\""; then
             logg success "Previous extension files removed"
         fi
     else
@@ -382,9 +352,9 @@ remove_existing_installation() {
     fi
     
     # Remove schema if it exists
-    rm -f "$HOME/.local/share/glib-2.0/schemas/org.gnome.shell.extensions.voxvibe.gschema.xml"
-    if [ -d "$HOME/.local/share/glib-2.0/schemas/" ]; then
-        if ! glib-compile-schemas "$HOME/.local/share/glib-2.0/schemas/" 2>/dev/null; then
+    rm -f "$DATA_HOME/glib-2.0/schemas/org.gnome.shell.extensions.voxvibe.gschema.xml"
+    if [ -d "$DATA_HOME/glib-2.0/schemas/" ]; then
+        if ! glib-compile-schemas "$DATA_HOME/glib-2.0/schemas/" 2>/dev/null; then
             logg warn "Could not recompile GLib schemas after removal"
         fi
     fi
