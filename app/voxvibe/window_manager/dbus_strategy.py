@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
+from PyQt6.QtCore import QVariant
 from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 
 from .base import WindowManagerStrategy
