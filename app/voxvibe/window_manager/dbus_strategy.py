@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
+from PyQt6.QtCore import QVariant
 from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 
 from .base import WindowManagerStrategy
@@ -94,7 +95,9 @@ class DBusWindowManagerStrategy(WindowManagerStrategy):
             logger.warning("No stored window ID; cannot focus & paste")
             return False
 
-        reply = self._interface.call("FocusAndPaste", self._stored_window_id, text)
+        # Ensure window ID is sent as unsigned 32-bit integer
+        window_id_unsigned = int(self._stored_window_id) & 0xFFFFFFFF
+        reply = self._interface.call("FocusAndPaste", window_id_unsigned, text)
         if reply.type() == QDBusMessage.MessageType.ErrorMessage:
             logger.error(f"FocusAndPaste error: {reply.errorMessage()}")
             return False
