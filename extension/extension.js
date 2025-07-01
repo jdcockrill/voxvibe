@@ -71,7 +71,7 @@ export default class DictationWindowExtension extends Extension {
                     <arg type="s" direction="out" name="windowId"/>
                 </method>
                 <method name="FocusAndPaste">
-                    <arg type="u" direction="in" name="windowId"/>
+                    <arg type="s" direction="in" name="windowId"/>
                     <arg type="s" direction="in" name="text"/>
                     <arg type="b" direction="out" name="success"/>
                 </method>
@@ -184,21 +184,28 @@ export default class DictationWindowExtension extends Extension {
     FocusAndPaste(windowId, text) {
         globalThis.log?.(`[VoxVibe] FocusAndPaste called with windowId: ${windowId}, text: ${text.slice(0, 40)}...`);
         try {
+            // Convert string windowId to integer for comparison
+            const windowIdInt = parseInt(windowId);
+            if (isNaN(windowIdInt)) {
+                globalThis.log?.(`[VoxVibe] Invalid windowId: ${windowId}`);
+                return false;
+            }
+            
             // 1. Find and focus the window
-            globalThis.log?.(`[VoxVibe] Step 1: Searching for window with ID ${windowId}`);
+            globalThis.log?.(`[VoxVibe] Step 1: Searching for window with ID ${windowIdInt}`);
             const windows = global.get_window_actors();
             let found = false;
             for (let windowActor of windows) {
                 const window = windowActor.get_meta_window();
-                if (window.get_id() === windowId) {
-                    globalThis.log?.(`[VoxVibe] Step 1: Focusing window ${windowId}`);
+                if (window.get_id() === windowIdInt) {
+                    globalThis.log?.(`[VoxVibe] Step 1: Focusing window ${windowIdInt}`);
                     window.activate(global.get_current_time());
                     found = true;
                     break;
                 }
             }
             if (!found) {
-                globalThis.log?.(`[VoxVibe] FocusAndPaste: window not found for ID ${windowId}`);
+                globalThis.log?.(`[VoxVibe] FocusAndPaste: window not found for ID ${windowIdInt}`);
                 return false;
             }
             // 2. Set clipboard content (both CLIPBOARD and PRIMARY)
