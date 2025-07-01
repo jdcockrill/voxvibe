@@ -1,6 +1,6 @@
 [project]
 name = "voxvibe"
-version = "0.2.3"
+version = "0.2.4"
 description = "A voice dictation application for Linux that captures audio and transcribes it to text using Whisper"
 readme = "README.md"
 requires-python = ">=3.11"
