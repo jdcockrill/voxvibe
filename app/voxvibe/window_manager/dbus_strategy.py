@@ -18,7 +18,15 @@ _INTERFACE = "org.gnome.Shell.Extensions.VoxVibe"
 class DBusWindowManagerStrategy(WindowManagerStrategy):
     """Window manager strategy using GNOME Shell DBus extension."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        bus_name: str = _BUS_NAME,
+        object_path: str = _OBJECT_PATH,
+        interface: str = _INTERFACE,
+    ):
+        self._bus_name = bus_name
+        self._object_path = object_path
+        self._interface_name = interface
         self._bus = None
         self._interface = None
         self._stored_window_info: Optional[str] = None
@@ -38,7 +46,9 @@ class DBusWindowManagerStrategy(WindowManagerStrategy):
                 logger.error("Cannot connect to the session DBus bus")
                 return False
 
-            self._interface = QDBusInterface(_BUS_NAME, _OBJECT_PATH, _INTERFACE, self._bus)
+            self._interface = QDBusInterface(
+                self._bus_name, self._object_path, self._interface_name, self._bus
+            )
             if not self._interface.isValid():
                 logger.debug("VoxVibe GNOME extension DBus interface not available")
                 return False
@@ -78,6 +88,11 @@ class DBusWindowManagerStrategy(WindowManagerStrategy):
             self._stored_window_id = None
             logger.warning("No focused window found")
 
+    def _make_focus_and_paste_payload(self, window_id: int, text: str) -> tuple[str, str]:
+        """Make a payload for the FocusAndPaste DBus method."""
+        # Convert window ID to string to avoid unsigned/signed integer issues
+        return (str(window_id), text)
+
     def focus_and_paste(self, text: str) -> bool:
         """Focus the previously stored window and paste text into it.
 
@@ -94,9 +109,8 @@ class DBusWindowManagerStrategy(WindowManagerStrategy):
             logger.warning("No stored window ID; cannot focus & paste")
             return False
 
-        # Ensure window ID is sent as unsigned 32-bit integer
-        window_id_unsigned = int(self._stored_window_id) & 0xFFFFFFFF
-        reply = self._interface.call("FocusAndPaste", window_id_unsigned, text)
+        payload = self._make_focus_and_paste_payload(self._stored_window_id, text)
+        reply = self._interface.call("FocusAndPaste", *payload)
         if reply.type() == QDBusMessage.MessageType.ErrorMessage:
             logger.error(f"FocusAndPaste error: {reply.errorMessage()}")
             return False
