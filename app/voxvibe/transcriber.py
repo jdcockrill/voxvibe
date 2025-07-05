@@ -6,6 +6,7 @@ import numpy as np
 from faster_whisper import WhisperModel
 
 from .config import TranscriptionConfig
+from .post_processor import PostProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +21,18 @@ class Transcriber:
         """
         self.config = config or TranscriptionConfig()
         self.model = None
+        self.post_processor = None
 
         # Initialize model lazily to avoid long startup times
         self._load_model()
+        
+        # Initialize post-processor if enabled
+        if self.config.post_processing.enabled:
+            self.post_processor = PostProcessor(
+                model=self.config.post_processing.model,
+                temperature=self.config.post_processing.temperature,
+                setenv=self.config.post_processing.setenv
+            )
 
     def _load_model(self):
         """Load the Whisper model"""
@@ -116,7 +126,22 @@ class Transcriber:
 
             if full_text:
                 logger.info(f"Transcribed ({info.language}, {info.language_probability:.2f}): {full_text}")
-                return full_text
+                
+                # Apply post-processing if enabled
+                if self.post_processor:
+                    try:
+                        processed_text = self.post_processor.process(full_text)
+                        if processed_text:
+                            logger.info(f"Final text: {processed_text}")
+                            return processed_text
+                        else:
+                            logger.warning("Post-processing failed, returning original text")
+                            return full_text
+                    except Exception as e:
+                        logger.error(f"Post-processing error: {e}")
+                        return full_text
+                else:
+                    return full_text
             else:
                 logger.warning("Empty transcription result")
                 return None

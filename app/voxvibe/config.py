@@ -30,10 +30,20 @@ class FasterWhisperConfig:
 
 
 @dataclass
+class PostProcessingConfig:
+    """Configuration for post-processing transcribed text."""
+    enabled: bool = True
+    model: str = "openai/gpt-4.1-mini"
+    temperature: float = 0.3
+    setenv: dict = field(default_factory=dict)
+
+
+@dataclass
 class TranscriptionConfig:
     """Configuration for transcription backend and models."""
     backend: Literal["faster-whisper"] = "faster-whisper"
     faster_whisper: FasterWhisperConfig = field(default_factory=FasterWhisperConfig)
+    post_processing: PostProcessingConfig = field(default_factory=PostProcessingConfig)
 
 
 @dataclass
@@ -181,6 +191,7 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
         
         # Handle nested faster-whisper config with backward compatibility
         faster_whisper_data = transcription_data.pop('faster_whisper', {})
+        post_processing_data = transcription_data.pop('post_processing', {})
         
         # Handle backward compatibility: move old direct fields to faster_whisper section
         old_fields = ['model', 'language', 'device', 'compute_type']
@@ -190,6 +201,7 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
         
         transcription_config = TranscriptionConfig(**transcription_data)
         transcription_config.faster_whisper = FasterWhisperConfig(**faster_whisper_data)
+        transcription_config.post_processing = PostProcessingConfig(**post_processing_data)
         
         # Create config objects
         return VoxVibeConfig(
@@ -234,6 +246,22 @@ def create_default_config() -> Path:
 
 # Compute type options: "auto", "int8", "int16", "float16", "float32"
 # compute_type = "auto"
+
+[transcription.post_processing]
+# Enable post-processing with LLM to improve transcription quality
+# enabled = true
+
+# LLM model to use for post-processing (must include provider prefix)
+# Examples: "openai/gpt-4.1-mini", "openai/gpt-4.1-nano", "anthropic/claude-3-5-haiku-20241022"
+# model = "openai/gpt-4.1-mini"
+
+# Temperature for LLM (0.0 = deterministic, 1.0 = more creative)
+# temperature = 0.3
+
+# Environment variables to set for LLM providers
+# [transcription.post_processing.setenv]
+# OPENAI_API_KEY = "your-openai-api-key"
+# ANTHROPIC_API_KEY = "your-anthropic-api-key"
 
 [audio]
 
