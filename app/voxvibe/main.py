@@ -2,6 +2,7 @@
 import argparse
 import logging
 import sys
+import time
 
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
@@ -11,6 +12,30 @@ from .single_instance import SingleInstance, SingleInstanceError
 
 # Basic logging setup for startup (will be reconfigured later)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - VoxVibe - %(levelname)s - %(message)s")
+
+
+def wait_for_system_tray(max_wait_seconds=30, check_interval=1):
+    """Wait for system tray to become available with retry logic
+    
+    Args:
+        max_wait_seconds: Maximum time to wait in seconds (default: 30)
+        check_interval: Time between checks in seconds (default: 1)
+        
+    Returns:
+        bool: True if system tray becomes available, False if timeout
+    """
+    logging.info(f"Waiting for system tray availability (max {max_wait_seconds}s)...")
+    
+    for attempt in range(max_wait_seconds):
+        if QSystemTrayIcon.isSystemTrayAvailable():
+            logging.info(f"System tray available after {attempt + 1} seconds")
+            return True
+        
+        if attempt < max_wait_seconds - 1:  # Don't sleep on the last attempt
+            time.sleep(check_interval)
+    
+    logging.error(f"System tray not available after {max_wait_seconds} seconds")
+    return False
 
 
 def main():
@@ -34,9 +59,9 @@ def main():
             app.setQuitOnLastWindowClosed(False)  # Don't quit when windows are closed
             app.setApplicationName("VoxVibe Service")
 
-            # Check if system tray is available
-            if not QSystemTrayIcon.isSystemTrayAvailable():
-                logging.error("System tray is not available on this system")
+            # Check if system tray is available with retry logic
+            if not wait_for_system_tray():
+                logging.error("System tray is not available after waiting")
                 return 1
 
             # Load configuration

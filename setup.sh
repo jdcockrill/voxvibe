@@ -225,6 +225,8 @@ install_systemd_service() {
 [Unit]
 Description=VoxVibe Voice Dictation Service
 After=graphical-session.target
+Wants=gnome-session.target
+After=gnome-session.target
 
 [Service]
 Type=simple
