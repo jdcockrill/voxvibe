@@ -146,6 +146,71 @@ export default class DictationWindowExtension extends Extension {
         return result;
     }
 
+    _backupClipboard() {
+        globalThis.log?.(`[VoxVibe] _backupClipboard: Backing up clipboard content`);
+        const clipboard = St.Clipboard.get_default();
+        
+        // Store backup object to restore later
+        this._clipboardBackup = {
+            clipboard: null,
+            primary: null
+        };
+        
+        // Get current clipboard content (this is async, but we'll handle it synchronously for now)
+        try {
+            clipboard.get_content(St.ClipboardType.CLIPBOARD, (clipboard, content) => {
+                if (content) {
+                    this._clipboardBackup.clipboard = content;
+                    globalThis.log?.(`[VoxVibe] _backupClipboard: Clipboard content backed up`);
+                } else {
+                    globalThis.log?.(`[VoxVibe] _backupClipboard: No clipboard content to backup`);
+                }
+            });
+            
+            clipboard.get_content(St.ClipboardType.PRIMARY, (clipboard, content) => {
+                if (content) {
+                    this._clipboardBackup.primary = content;
+                    globalThis.log?.(`[VoxVibe] _backupClipboard: Primary content backed up`);
+                } else {
+                    globalThis.log?.(`[VoxVibe] _backupClipboard: No primary content to backup`);
+                }
+            });
+        } catch (error) {
+            globalThis.log?.(`[VoxVibe] _backupClipboard: Error backing up clipboard: ${error}`);
+        }
+    }
+
+    _restoreClipboard() {
+        globalThis.log?.(`[VoxVibe] _restoreClipboard: Restoring clipboard content`);
+        
+        if (!this._clipboardBackup) {
+            globalThis.log?.(`[VoxVibe] _restoreClipboard: No backup to restore`);
+            return;
+        }
+        
+        const clipboard = St.Clipboard.get_default();
+        
+        try {
+            // Restore clipboard content
+            if (this._clipboardBackup.clipboard) {
+                clipboard.set_content(St.ClipboardType.CLIPBOARD, this._clipboardBackup.clipboard);
+                globalThis.log?.(`[VoxVibe] _restoreClipboard: Clipboard content restored`);
+            }
+            
+            // Restore primary content
+            if (this._clipboardBackup.primary) {
+                clipboard.set_content(St.ClipboardType.PRIMARY, this._clipboardBackup.primary);
+                globalThis.log?.(`[VoxVibe] _restoreClipboard: Primary content restored`);
+            }
+            
+            // Clear backup
+            this._clipboardBackup = null;
+            globalThis.log?.(`[VoxVibe] _restoreClipboard: Backup cleared`);
+        } catch (error) {
+            globalThis.log?.(`[VoxVibe] _restoreClipboard: Error restoring clipboard: ${error}`);
+        }
+    }
+
     _setClipboardText(text) {
         globalThis.log?.(`[VoxVibe] _setClipboardText: Setting clipboard and primary to: ${text.slice(0, 40)}...`);
         const clipboard = St.Clipboard.get_default();
@@ -173,8 +238,20 @@ export default class DictationWindowExtension extends Extension {
                 // Release Ctrl
                 virtualDevice.notify_keyval(global.get_current_time(), Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
                 globalThis.log?.(`[VoxVibe] _triggerPasteHack: Ctrl+Shift+V simulated successfully`);
+                
+                // Restore clipboard after paste operation completes
+                // Use a 200ms delay to ensure paste operation is complete
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+                    this._restoreClipboard();
+                    return false; // Remove timeout
+                });
             } catch (pasteErr) {
                 globalThis.log?.(`[VoxVibe] ERROR during _triggerPasteHack: ${pasteErr}`);
+                // Still try to restore clipboard even if paste failed
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+                    this._restoreClipboard();
+                    return false; // Remove timeout
+                });
             }
             // Return false to remove the timeout (run only once)
             return false;
@@ -208,14 +285,23 @@ export default class DictationWindowExtension extends Extension {
                 globalThis.log?.(`[VoxVibe] FocusAndPaste: window not found for ID ${windowIdInt}`);
                 return false;
             }
-            // 2. Set clipboard content (both CLIPBOARD and PRIMARY)
+            
+            // 2. Backup current clipboard content before replacing
+            this._backupClipboard();
+            
+            // 3. Set clipboard content (both CLIPBOARD and PRIMARY)
             this._setClipboardText(text);
-            // 3. Trigger paste after a short delay
+            
+            // 4. Trigger paste after a short delay (restore happens in _triggerPasteHack)
             this._triggerPasteHack();
             return true;
         } catch (e) {
             globalThis.log?.(`[VoxVibe] Error in FocusAndPaste: ${e}`);
             console.error('Error in FocusAndPaste:', e);
+            // Try to restore clipboard even if there was an error
+            if (this._clipboardBackup) {
+                this._restoreClipboard();
+            }
             return false;
         }
     }
