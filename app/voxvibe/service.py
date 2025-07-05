@@ -6,6 +6,8 @@ from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
+from .main import wait_for_system_tray
+
 from .audio_recorder import AudioRecorder
 from .config import VoxVibeConfig, create_default_config, find_config_file
 from .history_storage import HistoryStorage
@@ -225,8 +227,8 @@ class VoxVibeService(QObject):
             logger.error("System tray not initialized")
             return False
 
-        if not QSystemTrayIcon.isSystemTrayAvailable():
-            logger.error("System tray not available")
+        if not wait_for_system_tray():
+            logger.error("System tray not available after waiting")
             return False
 
         self.tray_icon.show()
