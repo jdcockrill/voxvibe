@@ -4,14 +4,13 @@ from typing import Optional
 
 from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
-
-from .main import wait_for_system_tray
+from PyQt6.QtWidgets import QApplication
 
 from .audio_recorder import AudioRecorder
 from .config import VoxVibeConfig, create_default_config, find_config_file
 from .history_storage import HistoryStorage
 from .hotkey_manager import AbstractHotkeyManager, create_hotkey_manager
+from .main import wait_for_system_tray
 from .state_manager import StateManager
 from .system_tray import SystemTrayIcon
 from .transcriber import Transcriber
