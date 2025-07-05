@@ -65,7 +65,7 @@ logg() {
         local styled_message=$(gum style "$MSG")
         
         if [ -n "$LABEL" ]; then
-            local styled_label=$(gum style --bold --background="$BGCOLOR" $FG "$LABEL")
+            local styled_label=$(gum style --bold --background="$BGCOLOR" "$FG" "$LABEL")
             echo "$styled_symbol $styled_label $styled_message"
         else
             echo "$styled_symbol $styled_message"
