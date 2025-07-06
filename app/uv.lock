@@ -1243,12 +1243,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyperclip"
-version = "1.9.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/30/23/2f0a3efc4d6a32f3b63cdff36cd398d9701d26cda58e3ab97ac79fb5e60d/pyperclip-1.9.0.tar.gz", hash = "sha256:b7de0142ddc81bfc5c7507eea19da920b92252b548b96186caf94a5e2527d310", size = 20961, upload-time = "2024-06-18T20:38:48.401Z" }
-
-[[package]]
 name = "pyqt6"
 version = "6.9.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1767,14 +1761,13 @@ wheels = [
 
 [[package]]
 name = "voxvibe"
-version = "0.2.4"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "faster-whisper" },
     { name = "litellm" },
     { name = "numpy" },
     { name = "pynput" },
-    { name = "pyperclip" },
     { name = "pyqt6" },
     { name = "qt-material" },
     { name = "sounddevice" },
@@ -1793,7 +1786,6 @@ requires-dist = [
     { name = "litellm", specifier = ">=1.74.0" },
     { name = "numpy", specifier = ">=2.3.0" },
     { name = "pynput", specifier = ">=1.7.6" },
-    { name = "pyperclip", specifier = ">=1.8.2" },
     { name = "pyqt6", specifier = ">=6.9.1" },
     { name = "qt-material", specifier = ">=2.17" },
     { name = "sounddevice", specifier = ">=0.5.2" },

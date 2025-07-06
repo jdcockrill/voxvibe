@@ -1,12 +1,13 @@
 """Main window manager class that orchestrates different strategies."""
 
+import json
 import logging
 from typing import List, Optional
 
 from ..config import WindowManagerConfig
+from ..models import WindowInfo
 from .base import WindowManagerStrategy
 from .dbus_strategy import DBusWindowManagerStrategy
-from .xdotool_strategy import XdotoolWindowManagerStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -32,16 +33,8 @@ class WindowManager:
 
     def _create_strategies_from_config(self) -> List[WindowManagerStrategy]:
         """Create strategy list based on configuration."""
-        if self.config.strategy == "auto":
-            # Default strategies in preference order
-            return [DBusWindowManagerStrategy(), XdotoolWindowManagerStrategy()]
-        elif self.config.strategy == "dbus":
-            return [DBusWindowManagerStrategy()]
-        elif self.config.strategy == "xdotool":
-            return [XdotoolWindowManagerStrategy()]
-        else:
-            logger.warning(f"Unknown window manager strategy: {self.config.strategy}, using auto")
-            return [DBusWindowManagerStrategy(), XdotoolWindowManagerStrategy()]
+        # Only use DBus strategy now
+        return [DBusWindowManagerStrategy()]
 
     def _initialize_strategy(self) -> None:
         """Find and initialize the first available strategy."""
@@ -147,6 +140,18 @@ class WindowManager:
             except Exception:
                 continue
         return available
+
+    def get_stored_window_info(self) -> Optional[WindowInfo]:
+        """Get stored window information from the active strategy.
+        
+        Returns:
+            WindowInfo TypedDict containing window information if available, None otherwise
+        """
+        if not self._active_strategy:
+            logger.warning("No active window manager strategy")
+            return None
+        
+        return self._active_strategy.get_stored_window_info()
 
     def get_diagnostics(self) -> dict:
         """Get comprehensive diagnostics for all strategies."""

@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 
 from PyQt6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 
+from ..models import WindowInfo
 from .base import WindowManagerStrategy
 
 logger = logging.getLogger(__name__)
@@ -160,6 +161,26 @@ class DBusWindowManagerStrategy(WindowManagerStrategy):
 
         base_diagnostics.update(dbus_diagnostics)
         return base_diagnostics
+
+    def get_stored_window_info(self) -> Optional[WindowInfo]:
+        """Get the stored window information as WindowInfo TypedDict.
+        
+        Returns:
+            WindowInfo TypedDict containing window information if available, None otherwise
+        """
+        if not self._stored_window_info:
+            return None
+        
+        try:
+            window_data = json.loads(self._stored_window_info)
+            return WindowInfo(
+                title=window_data.get("title", ""),
+                wm_class=window_data.get("wm_class", ""),
+                id=window_data.get("id", 0)
+            )
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.warning(f"Failed to parse stored window info: {e}")
+            return None
 
     def check_extension_available(self) -> bool:
         """Return True if the GNOME extension interface can be reached."""

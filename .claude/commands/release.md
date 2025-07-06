@@ -21,8 +21,9 @@ The process you must follow is:
 3. Create a branch in the form of `release/vX.Y.Z`
 4. Update version in app/pyproject.toml.
 5. Read the version number in extension/metadata.json and increment by 1.
-6. Commit changes to the branch and push to GitHub.
-7. Create a PR for the release branch.
+6. Run `uv lock` to update the lock file.
+7. Commit changes to the branch and push to GitHub.
+8. Create a PR for the release branch.
 
 The user will complete the remaining steps:
 1. Merge the PR into main.

@@ -14,6 +14,7 @@ class SystemTrayIcon(QSystemTrayIcon):
     stop_recording_requested = pyqtSignal()
     toggle_recording_requested = pyqtSignal()
     settings_requested = pyqtSignal()
+    profiles_requested = pyqtSignal()
     history_requested = pyqtSignal()
     history_copy_requested = pyqtSignal(str)  # Signal with text to copy
 
@@ -70,9 +71,11 @@ class SystemTrayIcon(QSystemTrayIcon):
             self._add_history_section()
             
             settings_action = self._menu.addAction("Settings")
+            profiles_action = self._menu.addAction("Profiles")
             self._menu.addSeparator()
 
             settings_action.triggered.connect(self.settings_requested.emit)
+            profiles_action.triggered.connect(self.profiles_requested.emit)
 
         quit_action = self._menu.addAction("Quit")
         quit_action.triggered.connect(self.quit_requested.emit)
