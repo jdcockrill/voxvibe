@@ -62,10 +62,10 @@ logg() {
     if [ "$GUM_AVAILABLE" = true ]; then
         # Build the styled message components separately to avoid flag conflicts
         local styled_symbol=$(gum style --foreground="$COLOR" "$SYMBOL")
-        local styled_message=$(gum style "$MSG")
+        local styled_message=$(gum style -- "$MSG")
         
         if [ -n "$LABEL" ]; then
-            local styled_label=$(gum style --bold --background="$BGCOLOR" "$FG" "$LABEL")
+            local styled_label=$(gum style --bold --background="$BGCOLOR" $FG -- "$LABEL")
             echo "$styled_symbol $styled_label $styled_message"
         else
             echo "$styled_symbol $styled_message"
@@ -373,10 +373,6 @@ complete_installation() {
     show_balloon "$(echo -e "🎉 VoxVibe $VERSION installed successfully! 🎈\n🎤 Ready to start voice dictation? Let's configure your hotkey! 💻")"
     
     logg success "Installation complete!"
-    logg info "Next steps:"
-    logg info "- Create a keyboard shortcut in GNOME Settings -> Keyboard -> Custom Shortcuts"
-    logg info "- Set command: voxvibe"  
-    logg info "- Assign your preferred hotkey (e.g., Ctrl+Alt+V)"
     
     return 0
 }
