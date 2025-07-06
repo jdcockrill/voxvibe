@@ -110,12 +110,6 @@ The window manager supports multiple strategies with automatic fallback:
 - **Advantages**: Native GNOME integration, works on both X11 and Wayland
 - **Reliability**: Preferred method for all GNOME users
 
-#### Xdotool Strategy (X11 Fallback) (`window_manager/xdotool_strategy.py`)
-- **Technology**: xdotool command-line utilities
-- **Platform**: X11-based Linux systems only
-- **Status**: ⚠️ **Less maintained** than DBus strategy
-- **Window Operations**: Direct X11 window manipulation
-- **Use Case**: Fallback for non-GNOME X11 environments
 
 ### System Integration
 
@@ -330,7 +324,7 @@ voxvibe --reset
 ```bash
 # Disable GNOME extension to test fallbacks
 gnome-extensions disable voxvibe@voxvibe.app
-voxvibe  # Should fall back to Qt hotkey + xdotool
+voxvibe  # Should fall back to Qt hotkey manager
 ```
 
 ## Performance Considerations
@@ -376,7 +370,6 @@ transcriber = Transcriber(
 
 4. **Window Focus Issues**:
    - DBus strategy works on X11 and Wayland
-   - Xdotool strategy requires X11
    - Some applications block focus changes
 
 ### Diagnostic Commands
@@ -408,7 +401,6 @@ for k, v in wm.get_diagnostics().items():
 
 ### Optional Dependencies
 - **pynput** (>=1.7.6): Global hotkey capture (Qt strategy)
-- **pyperclip** (>=1.8.2): Clipboard operations (xdotool strategy)
 - **psutil** (>=5.9.0): System utilities
 - **qt-material** (>=2.17): UI theming
 

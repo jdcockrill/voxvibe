@@ -146,7 +146,7 @@ show_notifications = false
 minimize_to_tray = false
 
 [window_manager]
-strategy = "xdotool"
+strategy = "dbus"
 paste_delay = 0.5
 
 [logging]
@@ -165,7 +165,7 @@ file = "/tmp/voxvibe.log"
     assert config.transcription == expected_transcription
     assert config.hotkeys == HotkeyConfig(strategy="dbus")
     assert config.ui == UIConfig(startup_delay=1.0, show_notifications=False, minimize_to_tray=False)
-    assert config.window_manager == WindowManagerConfig(strategy="xdotool", paste_delay=0.5)
+    assert config.window_manager == WindowManagerConfig(strategy="dbus", paste_delay=0.5)
     assert config.logging == LoggingConfig(level="DEBUG", file="/tmp/voxvibe.log")
 
 

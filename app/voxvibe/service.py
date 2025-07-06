@@ -8,9 +8,12 @@ from PyQt6.QtWidgets import QApplication
 
 from .audio_recorder import AudioRecorder
 from .config import VoxVibeConfig, create_default_config, find_config_file
+from .profiles.config import find_profiles_config_file, create_default_profiles_config
 from .history_storage import HistoryStorage
 from .hotkey_manager import AbstractHotkeyManager, create_hotkey_manager
 from .main import wait_for_system_tray
+from .post_processor import PostProcessor
+from .profiles import ProfileMatcherService, load_profiles_config
 from .state_manager import StateManager
 from .system_tray import SystemTrayIcon
 from .transcriber import Transcriber
@@ -34,6 +37,8 @@ class VoxVibeService(QObject):
         self.window_manager: Optional[WindowManager] = None
         self.hotkey_manager: Optional[AbstractHotkeyManager] = None
         self.history_storage: Optional[HistoryStorage] = None
+        self.post_processor: Optional[PostProcessor] = None
+        self.profile_matcher_service: Optional[ProfileMatcherService] = None
 
 
         
@@ -82,6 +87,13 @@ class VoxVibeService(QObject):
                 )
                 logger.info("History storage initialized")
 
+            # Initialize profile matcher service
+            self.profile_matcher_service = load_profiles_config()
+            if self.profile_matcher_service:
+                logger.info("Profile matcher service initialized")
+            else:
+                logger.info("Profile matcher service disabled (no valid configuration)")
+
             # Initialize system tray
             self.tray_icon = SystemTrayIcon(self.config.ui, service_mode=True)
             self._connect_tray_signals()
@@ -114,6 +126,7 @@ class VoxVibeService(QObject):
         self.tray_icon.stop_recording_requested.connect(self._stop_recording_via_state)
         self.tray_icon.toggle_recording_requested.connect(self._toggle_recording)
         self.tray_icon.settings_requested.connect(self._show_settings)
+        self.tray_icon.profiles_requested.connect(self._show_profiles)
         self.tray_icon.history_requested.connect(self._show_history)
         self.tray_icon.history_copy_requested.connect(self._on_history_copy)
         self.tray_icon.quit_requested.connect(self.shutdown_requested.emit)
@@ -206,10 +219,13 @@ class VoxVibeService(QObject):
             transcription = self.transcriber.transcribe(audio_data)
 
             if transcription and transcription.strip():
-                # Complete processing with transcription
+                # Apply post-processing if enabled
+                processed_text = self._apply_post_processing(transcription.strip())
+                
+                # Complete processing with final text
                 if self.state_manager:
-                    self.state_manager.complete_processing(transcription.strip())
-                logger.info(f"Transcription completed: {transcription[:50]}...")
+                    self.state_manager.complete_processing(processed_text)
+                logger.info(f"Transcription completed: {processed_text[:50]}...")
             else:
                 logger.warning("No transcription generated")
                 if self.state_manager:
@@ -324,6 +340,45 @@ class VoxVibeService(QObject):
                 3000,
             )
 
+    def _show_profiles(self):
+        """Open the `profiles.toml` file with the system's default editor/viewer."""
+        if not self.tray_icon:
+            return
+
+        try:
+            # Locate profiles configuration file (create a default one if missing)
+            profiles_path = find_profiles_config_file()
+            if profiles_path is None:
+                profiles_path = create_default_profiles_config()
+
+            # Convert to QUrl and request the OS to open it
+            url = QUrl.fromLocalFile(str(profiles_path))
+            opened = QDesktopServices.openUrl(url)
+
+            if opened:
+                # Brief confirmation that something happened
+                self.tray_icon.showMessage(
+                    "VoxVibe",
+                    f"Opened profiles file: {profiles_path}",
+                    SystemTrayIcon.MessageIcon.Information,
+                    1500,
+                )
+            else:
+                self.tray_icon.showMessage(
+                    "VoxVibe",
+                    "Failed to open profiles file with default application.",
+                    SystemTrayIcon.MessageIcon.Warning,
+                    3000,
+                )
+        except Exception as e:
+            logger.error(f"Error opening profiles file: {e}")
+            self.tray_icon.showMessage(
+                "VoxVibe",
+                "Error opening profiles file. Check logs for details.",
+                SystemTrayIcon.MessageIcon.Warning,
+                3000,
+            )
+
     def _show_history(self):
         """Show transcription history (placeholder for future implementation)"""
         self.tray_icon.showMessage(
@@ -370,3 +425,38 @@ class VoxVibeService(QObject):
 
         # Quit application
         QTimer.singleShot(100, self.app.quit)
+    
+    def _apply_post_processing(self, text: str) -> str:
+        """Apply post-processing to transcribed text with profile-specific prompts.
+        
+        Args:
+            text: The transcribed text to process
+            
+        Returns:
+            Processed text (original if post-processing disabled or fails)
+        """
+        # Check if post-processing is enabled
+        if not self.config.transcription.post_processing.enabled:
+            return text
+        
+        # Initialize post-processor if not already done
+        if not self.post_processor:
+            self.post_processor = PostProcessor(
+                model=self.config.transcription.post_processing.model,
+                temperature=self.config.transcription.post_processing.temperature,
+                setenv=self.config.transcription.post_processing.setenv
+            )
+        
+        # Get stored window info for profile matching
+        window_info = None
+        if self.window_manager:
+            window_info = self.window_manager.get_stored_window_info()
+        
+        # Try to find a matching profile if profile matcher service is available
+        custom_prompt = None
+        if self.profile_matcher_service and window_info:
+            custom_prompt = self.profile_matcher_service.get_custom_prompt(window_info)
+        
+        # Apply post-processing with custom prompt if available
+        processed_text = self.post_processor.process(text, custom_prompt=custom_prompt)
+        return processed_text if processed_text else text

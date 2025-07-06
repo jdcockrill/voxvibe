@@ -84,10 +84,10 @@ class WindowManagerConfig:
     Configuration for window management.
     
     Attributes:
-        strategy (Literal["auto", "dbus", "xdotool"]): The preferred strategy for window management.
+        strategy (Literal["auto", "dbus"]): The preferred strategy for window management.
         paste_delay (float): The delay in seconds before pasting.
     """
-    strategy: Literal["auto", "dbus", "xdotool"] = "auto"
+    strategy: Literal["auto", "dbus"] = "auto"
     paste_delay: float = 0.1
 
 
@@ -285,7 +285,7 @@ channels = 1
 # minimize_to_tray = true
 
 [window_manager]
-# Options: "auto", "dbus", "xdotool"
+# Options: "auto", "dbus"
 # strategy = "auto"
 # Delay in seconds before pasting
 # paste_delay = 0.1           

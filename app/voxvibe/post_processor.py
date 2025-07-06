@@ -62,12 +62,13 @@ Guidelines:
 
 Return only the improved text, no explanations or commentary."""
 
-    def process(self, text: str) -> Optional[str]:
+    def process(self, text: str, custom_prompt: Optional[str] = None) -> Optional[str]:
         """
         Post-process the transcribed text using LLM.
         
         Args:
             text: Raw transcribed text to process
+            custom_prompt: Optional custom system prompt to use instead of default
             
         Returns:
             Improved text or None if processing failed
@@ -82,11 +83,14 @@ Return only the improved text, no explanations or commentary."""
             # Create the user prompt
             user_prompt = f"Please improve this transcribed text:\n\n{text}"
             
+            # Use custom prompt if provided, otherwise use default
+            system_prompt = custom_prompt if custom_prompt else self._system_prompt
+            
             # Call the LLM
             response = litellm.completion(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": self._system_prompt},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
                 temperature=self.temperature,
