@@ -65,7 +65,7 @@ logg() {
         local styled_message=$(gum style -- "$MSG")
         
         if [ -n "$LABEL" ]; then
-            local styled_label=$(gum style --bold --background="$BGCOLOR" $FG -- "$LABEL")
+            local styled_label=$(gum style --bold --background="$BGCOLOR" "$FG" -- "$LABEL")
             echo "$styled_symbol $styled_label $styled_message"
         else
             echo "$styled_symbol $styled_message"
@@ -373,6 +373,10 @@ complete_installation() {
     show_balloon "$(echo -e "🎉 VoxVibe $VERSION installed successfully! 🎈\n🎤 Ready to start voice dictation? Let's configure your hotkey! 💻")"
     
     logg success "Installation complete!"
+    logg info "Next steps:"
+    logg info "- on Wayland: log out and log back in to enable the extension"  
+    logg info "- on X11: restart GNOME Shell (Alt+F2 -\u003e r) to enable the extension"
+    logg info "- Then use Super+X to begin voxvibing!"
     
     return 0
 }
