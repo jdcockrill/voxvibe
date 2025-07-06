@@ -158,7 +158,7 @@ export default class DictationWindowExtension extends Extension {
         
         // Get current clipboard content (this is async, but we'll handle it synchronously for now)
         try {
-            clipboard.get_content(St.ClipboardType.CLIPBOARD, (clipboard, content) => {
+            clipboard.get_content(St.ClipboardType.CLIPBOARD, 'text/plain', (clipboard, content) => {
                 if (content) {
                     this._clipboardBackup.clipboard = content;
                     globalThis.log?.(`[VoxVibe] _backupClipboard: Clipboard content backed up`);
@@ -167,7 +167,7 @@ export default class DictationWindowExtension extends Extension {
                 }
             });
             
-            clipboard.get_content(St.ClipboardType.PRIMARY, (clipboard, content) => {
+            clipboard.get_content(St.ClipboardType.PRIMARY, 'text/plain', (clipboard, content) => {
                 if (content) {
                     this._clipboardBackup.primary = content;
                     globalThis.log?.(`[VoxVibe] _backupClipboard: Primary content backed up`);
@@ -193,13 +193,13 @@ export default class DictationWindowExtension extends Extension {
         try {
             // Restore clipboard content
             if (this._clipboardBackup.clipboard) {
-                clipboard.set_content(St.ClipboardType.CLIPBOARD, this._clipboardBackup.clipboard);
+                clipboard.set_content(St.ClipboardType.CLIPBOARD, 'text/plain', this._clipboardBackup.clipboard);
                 globalThis.log?.(`[VoxVibe] _restoreClipboard: Clipboard content restored`);
             }
             
             // Restore primary content
             if (this._clipboardBackup.primary) {
-                clipboard.set_content(St.ClipboardType.PRIMARY, this._clipboardBackup.primary);
+                clipboard.set_content(St.ClipboardType.PRIMARY, 'text/plain', this._clipboardBackup.primary);
                 globalThis.log?.(`[VoxVibe] _restoreClipboard: Primary content restored`);
             }
             
