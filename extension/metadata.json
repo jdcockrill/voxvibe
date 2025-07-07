@@ -3,6 +3,6 @@
     "name": "VoxVibe",
     "description": "Voice dictation application for Linux",
     "shell-version": ["46", "47", "48"],
-    "version": 13,
+    "version": 14,
     "settings-schema": "org.gnome.shell.extensions.voxvibe"
 }
