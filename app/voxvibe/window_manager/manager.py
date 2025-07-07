@@ -1,6 +1,5 @@
 """Main window manager class that orchestrates different strategies."""
 
-import json
 import logging
 from typing import List, Optional
 

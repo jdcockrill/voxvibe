@@ -8,12 +8,12 @@ from PyQt6.QtWidgets import QApplication
 
 from .audio_recorder import AudioRecorder
 from .config import VoxVibeConfig, create_default_config, find_config_file
-from .profiles.config import find_profiles_config_file, create_default_profiles_config
 from .history_storage import HistoryStorage
 from .hotkey_manager import AbstractHotkeyManager, create_hotkey_manager
 from .main import wait_for_system_tray
 from .post_processor import PostProcessor
 from .profiles import ProfileMatcherService, load_profiles_config
+from .profiles.config import create_default_profiles_config, find_profiles_config_file
 from .state_manager import StateManager
 from .system_tray import SystemTrayIcon
 from .transcriber import Transcriber

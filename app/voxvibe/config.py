@@ -43,7 +43,6 @@ class TranscriptionConfig:
     """Configuration for transcription backend and models."""
     backend: Literal["faster-whisper"] = "faster-whisper"
     faster_whisper: FasterWhisperConfig = field(default_factory=FasterWhisperConfig)
-    post_processing: PostProcessingConfig = field(default_factory=PostProcessingConfig)
 
 
 @dataclass
@@ -132,6 +131,7 @@ class VoxVibeConfig:
         window_manager (WindowManagerConfig): Configuration for window management.
         history (HistoryConfig): Configuration for transcription history.
         logging (LoggingConfig): Configuration for logging.
+        post_processing (PostProcessingConfig): Configuration for post-processing transcribed text.
     """
     transcription: TranscriptionConfig = field(default_factory=TranscriptionConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)
@@ -140,6 +140,7 @@ class VoxVibeConfig:
     window_manager: WindowManagerConfig = field(default_factory=WindowManagerConfig)
     history: HistoryConfig = field(default_factory=HistoryConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    post_processing: PostProcessingConfig = field(default_factory=PostProcessingConfig)
 
 
 class ConfigurationError(Exception):
@@ -188,10 +189,17 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
         window_manager_data = config_data.get('window_manager', {})
         history_data = config_data.get('history', {})
         logging_data = config_data.get('logging', {})
+        post_processing_data = config_data.get('post_processing', {})
         
         # Handle nested faster-whisper config with backward compatibility
         faster_whisper_data = transcription_data.pop('faster_whisper', {})
-        post_processing_data = transcription_data.pop('post_processing', {})
+        
+        # Handle backward compatibility: check if post_processing is still nested under transcription
+        if 'post_processing' in transcription_data:
+            nested_post_processing = transcription_data.pop('post_processing', {})
+            # Only use nested config if top-level is empty
+            if not post_processing_data:
+                post_processing_data = nested_post_processing
         
         # Handle backward compatibility: move old direct fields to faster_whisper section
         old_fields = ['model', 'language', 'device', 'compute_type']
@@ -201,7 +209,6 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
         
         transcription_config = TranscriptionConfig(**transcription_data)
         transcription_config.faster_whisper = FasterWhisperConfig(**faster_whisper_data)
-        transcription_config.post_processing = PostProcessingConfig(**post_processing_data)
         
         # Create config objects
         return VoxVibeConfig(
@@ -212,6 +219,7 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
             window_manager=WindowManagerConfig(**window_manager_data),
             history=HistoryConfig(**history_data),
             logging=LoggingConfig(**logging_data),
+            post_processing=PostProcessingConfig(**post_processing_data),
         )
     
     except TypeError as e:
@@ -247,7 +255,7 @@ def create_default_config() -> Path:
 # Compute type options: "auto", "int8", "int16", "float16", "float32"
 # compute_type = "auto"
 
-[transcription.post_processing]
+[post_processing]
 # Enable post-processing with LLM to improve transcription quality
 # enabled = true
 
@@ -259,7 +267,7 @@ def create_default_config() -> Path:
 # temperature = 0.3
 
 # Environment variables to set for LLM providers
-# [transcription.post_processing.setenv]
+# [post_processing.setenv]
 # OPENAI_API_KEY = "your-openai-api-key"
 # ANTHROPIC_API_KEY = "your-anthropic-api-key"
 
