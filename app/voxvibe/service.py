@@ -436,15 +436,15 @@ class VoxVibeService(QObject):
             Processed text (original if post-processing disabled or fails)
         """
         # Check if post-processing is enabled
-        if not self.config.transcription.post_processing.enabled:
+        if not self.config.post_processing.enabled:
             return text
         
         # Initialize post-processor if not already done
         if not self.post_processor:
             self.post_processor = PostProcessor(
-                model=self.config.transcription.post_processing.model,
-                temperature=self.config.transcription.post_processing.temperature,
-                setenv=self.config.transcription.post_processing.setenv
+                model=self.config.post_processing.model,
+                temperature=self.config.post_processing.temperature,
+                setenv=self.config.post_processing.setenv
             )
         
         # Get stored window info for profile matching
