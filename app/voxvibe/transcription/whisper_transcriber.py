@@ -1,33 +1,39 @@
+"""Whisper-based transcriber using faster-whisper."""
+
 import logging
 import os
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 from faster_whisper import WhisperModel
 
-from .config import TranscriptionConfig
+from .base import BaseTranscriber
 
 logger = logging.getLogger(__name__)
 
 
-class Transcriber:
-    def __init__(self, config: Optional[TranscriptionConfig] = None):
+class WhisperTranscriber(BaseTranscriber):
+    """Transcriber using faster-whisper for speech-to-text."""
+    
+    def __init__(self, config=None):
         """
         Initialize the Whisper transcriber.
 
         Args:
-            config: TranscriptionConfig object with transcription settings
+            config: Configuration object with faster_whisper settings
         """
-        self.config = config or TranscriptionConfig()
+        super().__init__(config)
         self.model = None
 
         # Initialize model lazily to avoid long startup times
         self._load_model()
 
-
     def _load_model(self):
         """Load the Whisper model"""
         try:
+            if not hasattr(self.config, 'faster_whisper'):
+                raise ValueError("WhisperTranscriber requires faster_whisper configuration")
+                
             logger.info(f"Loading Whisper model: {self.config.faster_whisper.model}")
 
             # Use CPU for better compatibility
@@ -55,7 +61,7 @@ class Transcriber:
 
     def transcribe(self, audio_data: np.ndarray, language: Optional[str] = None) -> Optional[str]:
         """
-        Transcribe audio data to text.
+        Transcribe audio data to text using Whisper.
 
         Args:
             audio_data: Numpy array of audio data (float32, mono, 16kHz)
@@ -68,24 +74,12 @@ class Transcriber:
             logger.warning("Model not loaded")
             return None
 
-        if audio_data is None or len(audio_data) == 0:
-            logger.warning("No audio data provided")
+        if not self.validate_audio(audio_data):
             return None
 
         try:
-            # Ensure audio is in the correct format
-            if audio_data.dtype != np.float32:
-                audio_data = audio_data.astype(np.float32)
-
-            # Normalize audio if needed
-            if np.max(np.abs(audio_data)) > 1.0:
-                audio_data = audio_data / np.max(np.abs(audio_data))
-
-            # Check minimum length (at least 0.1 seconds)
-            min_samples = int(0.1 * 16000)  # 0.1 seconds at 16kHz
-            if len(audio_data) < min_samples:
-                logger.warning("Audio too short for transcription")
-                return None
+            # Preprocess audio
+            audio_data = self.preprocess_audio(audio_data)
 
             # Use provided language or fall back to config
             transcribe_language = language or self.config.faster_whisper.language
@@ -126,7 +120,7 @@ class Transcriber:
             logger.exception(f"Transcription error: {e}")
             return None
 
-    def get_available_models(self):
+    def get_available_models(self) -> List[str]:
         """Get list of available Whisper model sizes"""
         return [
             "tiny",  # ~39 MB
@@ -137,106 +131,8 @@ class Transcriber:
             "large-v3",  # ~1550 MB
         ]
 
-    def get_supported_languages(self):
+    def get_supported_languages(self) -> List[str]:
         """Get list of supported language codes"""
         return [
-            "en",
-            "zh",
-            "de",
-            "es",
-            "ru",
-            "ko",
-            "fr",
-            "ja",
-            "pt",
-            "tr",
-            "pl",
-            "ca",
-            "nl",
-            "ar",
-            "sv",
-            "it",
-            "id",
-            "hi",
-            "fi",
-            "vi",
-            "he",
-            "uk",
-            "el",
-            "ms",
-            "cs",
-            "ro",
-            "da",
-            "hu",
-            "ta",
-            "no",
-            "th",
-            "ur",
-            "hr",
-            "bg",
-            "lt",
-            "la",
-            "mi",
-            "ml",
-            "cy",
-            "sk",
-            "te",
-            "fa",
-            "lv",
-            "bn",
-            "sr",
-            "az",
-            "sl",
-            "kn",
-            "et",
-            "mk",
-            "br",
-            "eu",
-            "is",
-            "hy",
-            "ne",
-            "mn",
-            "bs",
-            "kk",
-            "sq",
-            "sw",
-            "gl",
-            "mr",
-            "pa",
-            "si",
-            "km",
-            "sn",
-            "yo",
-            "so",
-            "af",
-            "oc",
-            "ka",
-            "be",
-            "tg",
-            "sd",
-            "gu",
-            "am",
-            "yi",
-            "lo",
-            "uz",
-            "fo",
-            "ht",
-            "ps",
-            "tk",
-            "nn",
-            "mt",
-            "sa",
-            "lb",
-            "my",
-            "bo",
-            "tl",
-            "mg",
-            "as",
-            "tt",
-            "haw",
-            "ln",
-            "ha",
-            "ba",
-            "jw",
-            "su",
+            "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi", "vi", "he", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur", "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn", "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw", "gl", "mr", "pa", "si", "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo", "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln", "ha", "ba", "jw", "su"
         ]
