@@ -6,7 +6,7 @@ import time
 
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
-from .config import config, setup_logging
+from .config import ConfigurationError, config, create_default_config, setup_logging
 from .signal_wakeup_handler import SignalWakeupHandler
 from .single_instance import SingleInstance, SingleInstanceError
 
@@ -42,14 +42,20 @@ def main():
     """Run VoxVibe as a background service with system tray"""
     from .service import VoxVibeService
 
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser(description="VoxVibe - Voice transcription service")
     parser.add_argument("--reset", action="store_true", help="Clear any stale single-instance lock and exit")
+    parser.add_argument("--create-config", action="store_true", help="Create a default configuration file and exit")
     args = parser.parse_args()
 
     try:
         with SingleInstance("voxvibe_service_instance", reset=args.reset):
             if args.reset:
                 logging.info("Service single-instance lock reset successfully.")
+                return 0
+            
+            if args.create_config:
+                config_path = create_default_config()
+                logging.info(f"Created default configuration file at: {config_path}")
                 return 0
 
             app = QApplication(sys.argv)
@@ -64,8 +70,13 @@ def main():
                 logging.error("System tray is not available after waiting")
                 return 1
 
-            # Load configuration
-            app_config = config()
+            # Load configuration with proper error handling
+            try:
+                app_config = config()
+            except ConfigurationError as e:
+                logging.error(f"Configuration error: {e}")
+                logging.error("To create a default configuration file, run: voxvibe --create-config")
+                return 1
             
             # Setup logging based on configuration
             setup_logging(app_config.logging)

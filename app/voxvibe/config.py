@@ -30,6 +30,13 @@ class FasterWhisperConfig:
 
 
 @dataclass
+class VoxtralConfig:
+    """Configuration for Voxtral (Mistral) backend."""
+    model: str = "voxtral-mini-latest"
+    api_key: str = ""
+
+
+@dataclass
 class PostProcessingConfig:
     """Configuration for post-processing transcribed text."""
     enabled: bool = True
@@ -41,8 +48,9 @@ class PostProcessingConfig:
 @dataclass
 class TranscriptionConfig:
     """Configuration for transcription backend and models."""
-    backend: Literal["faster-whisper"] = "faster-whisper"
+    backend: Literal["faster-whisper", "voxtral"] = "faster-whisper"
     faster_whisper: FasterWhisperConfig = field(default_factory=FasterWhisperConfig)
+    voxtral: VoxtralConfig = field(default_factory=VoxtralConfig)
 
 
 @dataclass
@@ -191,8 +199,9 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
         logging_data = config_data.get('logging', {})
         post_processing_data = config_data.get('post_processing', {})
         
-        # Handle nested faster-whisper config with backward compatibility
+        # Handle nested faster-whisper and voxtral config with backward compatibility
         faster_whisper_data = transcription_data.pop('faster_whisper', {})
+        voxtral_data = transcription_data.pop('voxtral', {})
         
         # Handle backward compatibility: check if post_processing is still nested under transcription
         if 'post_processing' in transcription_data:
@@ -209,6 +218,7 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
         
         transcription_config = TranscriptionConfig(**transcription_data)
         transcription_config.faster_whisper = FasterWhisperConfig(**faster_whisper_data)
+        transcription_config.voxtral = VoxtralConfig(**voxtral_data)
         
         # Create config objects
         return VoxVibeConfig(
@@ -223,7 +233,19 @@ def _parse_config(config_data: dict) -> VoxVibeConfig:
         )
     
     except TypeError as e:
-        raise ConfigurationError(f"Invalid configuration format: {e}")
+        # Extract the specific field that failed validation from the error message
+        error_msg = str(e)
+        if "unexpected keyword argument" in error_msg:
+            # Extract field name from error like "unexpected keyword argument 'invalid_field'"
+            field_match = error_msg.split("'")
+            if len(field_match) >= 2:
+                invalid_field = field_match[1]
+                raise ConfigurationError(f"Invalid configuration: unknown field '{invalid_field}'. {e}")
+        elif "required positional argument" in error_msg:
+            # Extract missing field from error
+            raise ConfigurationError(f"Invalid configuration: missing required field. {e}")
+        else:
+            raise ConfigurationError(f"Invalid configuration format: {e}")
 
 
 def create_default_config() -> Path:
@@ -236,7 +258,7 @@ def create_default_config() -> Path:
     default_config = '''# VoxVibe Configuration File
 
 [transcription]
-# Options: "faster-whisper", default: "faster-whisper"
+# Options: "faster-whisper", "voxtral", default: "faster-whisper"
 # backend = "faster-whisper"  
 
 [transcription.faster_whisper]
@@ -254,6 +276,13 @@ def create_default_config() -> Path:
 
 # Compute type options: "auto", "int8", "int16", "float16", "float32"
 # compute_type = "auto"
+
+[transcription.voxtral]
+# Voxtral model options: "voxtral-mini-latest"
+# model = "voxtral-mini-latest"
+
+# Mistral API key (required for Voxtral backend)
+# api_key = "your-mistral-api-key"
 
 [post_processing]
 # Enable post-processing with LLM to improve transcription quality
@@ -324,14 +353,9 @@ channels = 1
 
 
 def get_config() -> VoxVibeConfig:
-    """Get configuration, creating default if none exists."""
-    try:
-        logger.info("Loading configuration")
-        return load_config()
-    except ConfigurationError:
-        logger.warning("Failed to load configuration, creating default")
-        create_default_config()
-        return VoxVibeConfig()
+    """Get configuration, raising ConfigurationError if invalid or not found."""
+    logger.info("Loading configuration")
+    return load_config()
 
 
 # Global configuration instance (lazy-loaded)

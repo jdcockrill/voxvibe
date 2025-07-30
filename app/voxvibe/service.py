@@ -16,7 +16,7 @@ from .profiles import ProfileMatcherService, load_profiles_config
 from .profiles.config import create_default_profiles_config, find_profiles_config_file
 from .state_manager import StateManager
 from .system_tray import SystemTrayIcon
-from .transcriber import Transcriber
+from .transcription import VoxtralTranscriber, WhisperTranscriber
 from .window_manager import WindowManager
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class VoxVibeService(QObject):
         self.config = config
         self.tray_icon: Optional[SystemTrayIcon] = None
         self.audio_recorder: Optional[AudioRecorder] = None
-        self.transcriber: Optional[Transcriber] = None
+        self.transcriber = None
         self.window_manager: Optional[WindowManager] = None
         self.hotkey_manager: Optional[AbstractHotkeyManager] = None
         self.history_storage: Optional[HistoryStorage] = None
@@ -53,6 +53,20 @@ class VoxVibeService(QObject):
         logger.info(f"Received signal {signum}, initiating shutdown...")
         self.shutdown_requested.emit()
 
+    def _create_transcriber(self):
+        """Create the appropriate transcriber based on configuration"""
+        backend = self.config.transcription.backend
+        
+        if backend == "voxtral":
+            logger.info("Creating VoxtralTranscriber")
+            return VoxtralTranscriber(self.config.transcription)
+        elif backend == "faster-whisper":
+            logger.info("Creating WhisperTranscriber")
+            return WhisperTranscriber(self.config.transcription)
+        else:
+            logger.warning(f"Unknown transcription backend '{backend}', defaulting to faster-whisper")
+            return WhisperTranscriber(self.config.transcription)
+
     def _initialize_components(self):
         """Initialize all service components"""
         try:
@@ -60,7 +74,7 @@ class VoxVibeService(QObject):
             self.state_manager = StateManager()
 
             # Initialize transcriber
-            self.transcriber = Transcriber(self.config.transcription)
+            self.transcriber = self._create_transcriber()
 
             # Initialize audio recorder
             self.audio_recorder = AudioRecorder(self.config.audio)
